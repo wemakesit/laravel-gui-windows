@@ -12,10 +12,10 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         extras: [],
         additional_info: ''
     };
-    
+
     const [formData, setFormData] = useState(windowData || defaultWindow);
     const [selectedType, setSelectedType] = useState(null);
-    
+
     useEffect(() => {
         if (formData.type && windowTypes?.window_types) {
             const type = windowTypes.window_types.find(t => t.Type === formData.type);
@@ -24,23 +24,23 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                 if (!windowData) {
                     setFormData(prev => ({
                         ...prev,
-                        cost: type.BasePrice
+                        cost: type.Cost || type.BasePrice || 0
                     }));
                 }
             }
         }
-    }, [formData.type, windowTypes]);
-    
+    }, [formData.type, windowTypes, windowData]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
+
         if (name === 'type' && windowTypes?.window_types) {
             const type = windowTypes.window_types.find(t => t.Type === value);
             if (type) {
                 setFormData({
                     ...formData,
                     type: value,
-                    cost: type.BasePrice
+                    cost: type.Cost || type.BasePrice || 0
                 });
             } else {
                 setFormData({
@@ -60,12 +60,12 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
             });
         }
     };
-    
+
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(formData);
     };
-    
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -81,7 +81,7 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                 </div>
-                
+
                 <div>
                     <label htmlFor="type" className="block text-sm font-medium text-gray-700">Window Type</label>
                     <select
@@ -95,12 +95,12 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                         <option value="">Select a window type</option>
                         {windowTypes?.window_types?.map((type, index) => (
                             <option key={index} value={type.Type}>
-                                {type.Type} - £{type.BasePrice.toFixed(2)}
+                                {type.Type} - £{type.Cost ? type.Cost.toFixed(2) : (type.BasePrice ? type.BasePrice.toFixed(2) : '0.00')}
                             </option>
                         ))}
                     </select>
                 </div>
-                
+
                 <div>
                     <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity</label>
                     <input
@@ -114,17 +114,17 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                 </div>
-                
+
                 {selectedType && (
                     <div className="md:col-span-2">
                         <div className="bg-gray-50 p-4 rounded-md">
                             <h3 className="font-medium text-gray-900">{selectedType.Type}</h3>
-                            <p className="text-gray-600 mt-1">{selectedType.Description}</p>
-                            <p className="text-gray-900 mt-2">Base Price: £{selectedType.BasePrice.toFixed(2)}</p>
+                            <p className="text-gray-600 mt-1">{selectedType.Description || 'No description available'}</p>
+                            <p className="text-gray-900 mt-2">Price: £{selectedType.Cost ? selectedType.Cost.toFixed(2) : (selectedType.BasePrice ? selectedType.BasePrice.toFixed(2) : '0.00')}</p>
                         </div>
                     </div>
                 )}
-                
+
                 <div className="md:col-span-2">
                     <label htmlFor="additional_info" className="block text-sm font-medium text-gray-700">Additional Information</label>
                     <textarea
@@ -137,7 +137,7 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                     />
                 </div>
             </div>
-            
+
             <div className="flex justify-end space-x-3">
                 <button
                     type="button"

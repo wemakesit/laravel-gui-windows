@@ -41,7 +41,41 @@ class QuotationWizardController extends Controller
      */
     public function generate(Request $request)
     {
-        $validated = $request->validate([
+        // Validate the data
+        $validated = $this->validateQuotationData($request->all());
+
+        $result = $this->apiService->generateQuotation($validated);
+
+        if ($result['success']) {
+            // Generate a unique filename with timestamp
+            $filename = 'quotation_' . date('Y-m-d_H-i-s') . '.pdf';
+
+            // Store the PDF temporarily
+            $tempPath = storage_path('app/temp/' . $filename);
+
+            // Create the directory if it doesn't exist
+            if (!file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            // Write the PDF data to the file
+            file_put_contents($tempPath, $result['data']);
+
+            // Return the file as a download and then delete it
+            return response()->download($tempPath, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
+        }
+
+        return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
+    }
+
+    /**
+     * Validate quotation data
+     */
+    private function validateQuotationData($data)
+    {
+        $rules = [
             'customer_details' => 'required|array',
             'customer_details.first_name' => 'required|string',
             'customer_details.last_name' => 'required|string',
@@ -58,18 +92,8 @@ class QuotationWizardController extends Controller
             'windows.*.quantity' => 'required|integer|min:1',
             'windows.*.extras' => 'nullable|array',
             'selected_caveats' => 'nullable|array',
-        ]);
+        ];
 
-        $result = $this->apiService->generateQuotation($validated);
-
-        if ($result['success']) {
-            // Return the PDF as a download
-            return response($result['data'], 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="quotation.pdf"',
-            ]);
-        }
-
-        return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
+        return validator($data, $rules)->validate();
     }
 }

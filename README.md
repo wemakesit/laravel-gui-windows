@@ -1,60 +1,123 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Windows Quotation System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel application with Inertia.js and React for creating window quotations through a wizard-style GUI interface. This application allows users to create quotations with customer information, add windows, and generate downloadable PDF files.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Wizard-style GUI with modal-focused steps
+- Customer information management
+- Window specification and configuration
+- PDF quotation generation and download
+- Integration with external API for data processing
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.1 or higher
+- Composer
+- Node.js (v16+) and npm
+- SQLite or other database system
+- External API running on port 8001
 
-## Learning Laravel
+## Installation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Clone the repository
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+```bash
+git clone <repository-url>
+cd laravel-gui-windows
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. Install PHP dependencies
 
-## Laravel Sponsors
+```bash
+composer install
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 3. Install JavaScript dependencies
 
-### Premium Partners
+```bash
+npm install
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development/)**
-- **[Active Logic](https://activelogic.com)**
+### 4. Set up environment variables
 
-## Contributing
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Edit the `.env` file to configure your database and API connection:
 
-## Code of Conduct
+```env
+DB_CONNECTION=sqlite
+# Or configure MySQL/PostgreSQL if preferred
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# API Configuration
+API_BASE_URL=http://localhost:8001
+```
 
-## Security Vulnerabilities
+### 5. Set up the database
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan migrate
+```
+
+### 6. Create storage link for files
+
+```bash
+php artisan storage:link
+```
+
+## Running the Application
+
+### Development Mode
+
+1. Start the Laravel server:
+
+   ```bash
+   php artisan serve
+   ```
+
+2. In a separate terminal, start the Vite development server:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Access the application at [http://localhost:8000](http://localhost:8000)
+
+### Production Mode
+
+1. Build the frontend assets:
+
+   ```bash
+   npm run build
+   ```
+
+2. Start the Laravel server:
+
+   ```bash
+   php artisan serve
+   ```
+
+3. Access the application at [http://localhost:8000](http://localhost:8000)
+
+## Using the Quotation Wizard
+
+1. Navigate to `/quotation` in your browser
+2. Follow the wizard steps:
+   - Enter customer information
+   - Add and configure windows
+   - Review the quotation
+3. Click "Generate" to create a downloadable PDF
+
+## File Storage
+
+Generated files and quotations are stored in the `storage/app/` directory. Make sure this directory is writable by the web server.
+
+## API Integration
+
+The application integrates with an external API running on port 8001. Ensure the API is running and properly configured in your `.env` file.
 
 ## License
 

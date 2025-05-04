@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
+import axios from 'axios';
 import CustomerInfoStep from './Steps/CustomerInfoStep';
 import WindowSelectionStep from './Steps/WindowSelectionStep';
 import WindowConfigStep from './Steps/WindowConfigStep';
@@ -28,6 +28,8 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const [currentWindow, setCurrentWindow] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [notification, setNotification] = useState(null);
 
     const totalSteps = 5;
 
@@ -96,16 +98,57 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     };
 
     const submitQuotation = () => {
-        // Use Inertia's router to handle the form submission
-        router.post(route('quotation.generate'), formData, {
-            forceFormData: true, // Force form data to handle file downloads
-            onSuccess: () => {
-                // The browser will automatically handle the file download
-                console.log('Quotation generated successfully');
-            },
-            onError: (errors) => {
-                console.error('Failed to generate quotation:', errors);
+        setIsGenerating(true);
+        setNotification({ type: 'info', message: 'Generating quotation, please wait...' });
+
+        // Use axios for direct file download instead of Inertia
+        axios.post(route('quotation.generate'), formData, {
+            responseType: 'blob', // Important for handling binary data
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             }
+        })
+        .then(response => {
+            setIsGenerating(false);
+
+            // Create a download link and trigger it
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            // Get filename from Content-Disposition header or use default
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = 'quotation.pdf';
+
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (filenameMatch && filenameMatch.length === 2) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setNotification({ type: 'success', message: 'Quotation downloaded successfully!' });
+
+            // Clear notification after 3 seconds
+            setTimeout(() => {
+                setNotification(null);
+            }, 3000);
+        })
+        .catch(error => {
+            setIsGenerating(false);
+            console.error('Failed to generate quotation:', error);
+            setNotification({ type: 'error', message: 'Failed to generate quotation. Please try again.' });
+
+            // Clear notification after 3 seconds
+            setTimeout(() => {
+                setNotification(null);
+            }, 3000);
         });
     };
 
@@ -175,6 +218,33 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
         <>
             <Head title="Window Quotation Wizard" />
 
+            {notification && (
+                <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-md ${
+                    notification.type === 'success' ? 'bg-green-100 border border-green-400 text-green-700' :
+                    notification.type === 'error' ? 'bg-red-100 border border-red-400 text-red-700' :
+                    'bg-blue-100 border border-blue-400 text-blue-700'
+                }`}>
+                    <div className="flex items-center">
+                        {notification.type === 'success' && (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        {notification.type === 'error' && (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        {notification.type === 'info' && (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1-5a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <p>{notification.message}</p>
+                    </div>
+                </div>
+            )}
+
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -193,7 +263,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                                 nextStep={nextStep}
                                 prevStep={prevStep}
                                 submitQuotation={submitQuotation}
-                                isValid={true} // Add validation logic here
+                                isValid={!isGenerating} // Disable button while generating
                             />
                         </div>
                     </div>

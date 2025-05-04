@@ -64,6 +64,7 @@ class QuotationWizardController extends Controller
             // Return the file as a download and then delete it
             return response()->download($tempPath, $filename, [
                 'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ])->deleteFileAfterSend(true);
         }
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
 import CustomerInfoStep from './Steps/CustomerInfoStep';
 import WindowSelectionStep from './Steps/WindowSelectionStep';
@@ -9,7 +9,7 @@ import ReviewStep from './Steps/ReviewStep';
 import WizardProgress from './Components/WizardProgress';
 import WizardNavigation from './Components/WizardNavigation';
 
-export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdfTextConfig }) {
+export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdfTextConfig, loadedQuotation }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
         customer_details: {
@@ -30,8 +30,26 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const [modalContent, setModalContent] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     const totalSteps = 5;
+
+    // Load quotation data if provided
+    useEffect(() => {
+        if (loadedQuotation && !isLoaded) {
+            setFormData(loadedQuotation);
+            setIsLoaded(true);
+            setNotification({
+                type: 'info',
+                message: 'Quotation loaded successfully. You can now edit and regenerate it.'
+            });
+
+            // Clear notification after 3 seconds
+            setTimeout(() => {
+                setNotification(null);
+            }, 3000);
+        }
+    }, [loadedQuotation, isLoaded]);
 
     const updateFormData = (section, data) => {
         setFormData(prevData => ({
@@ -102,7 +120,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
         setNotification({ type: 'info', message: 'Generating quotation, please wait...' });
 
         // Use axios for direct file download instead of Inertia
-        axios.post(route('quotation.generate'), formData, {
+        axios.post(route('quotations.generate'), formData, {
             responseType: 'blob', // Important for handling binary data
             headers: {
                 'Content-Type': 'application/json',
@@ -249,7 +267,15 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900">
-                            <h1 className="text-2xl font-semibold mb-6">Window Quotation Wizard</h1>
+                            <div className="flex justify-between items-center mb-6">
+                                <h1 className="text-2xl font-semibold">Window Quotation Wizard</h1>
+                                <Link
+                                    href={route('quotations.index')}
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                                >
+                                    Back to Quotations
+                                </Link>
+                            </div>
 
                             <WizardProgress currentStep={currentStep} totalSteps={totalSteps} />
 

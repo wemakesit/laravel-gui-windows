@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Quotation;
+use App\Models\QuotationFile;
 use App\Services\ApiService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-class QuotationWizardController extends Controller
+class QuotationCreateController extends Controller
 {
     protected ApiService $apiService;
 
@@ -18,7 +21,7 @@ class QuotationWizardController extends Controller
     /**
      * Display the quotation wizard.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Get all the necessary data for the wizard
         $windowTypes = $this->apiService->getWindowTypes();
@@ -33,6 +36,7 @@ class QuotationWizardController extends Controller
             'finishes' => $finishes,
             'companyInfo' => $companyInfo,
             'pdfTextConfig' => $pdfTextConfig,
+            'loadedQuotation' => null, // No quotation loaded by default
         ]);
     }
 
@@ -50,18 +54,48 @@ class QuotationWizardController extends Controller
             // Generate a unique filename with timestamp
             $filename = 'quotation_' . date('Y-m-d_H-i-s') . '.pdf';
 
-            // Store the PDF temporarily
+            // Store the PDF temporarily for download
             $tempPath = storage_path('app/temp/' . $filename);
 
-            // Create the directory if it doesn't exist
+            // Create the temp directory if it doesn't exist
             if (!file_exists(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
-            // Write the PDF data to the file
+            // Write the PDF data to the temp file
             file_put_contents($tempPath, $result['data']);
 
-            // Return the file as a download and then delete it
+            // Create a permanent storage path for the PDF
+            $storagePath = 'quotations/' . $filename;
+            
+            // Store the PDF permanently
+            Storage::put($storagePath, $result['data']);
+            
+            // Calculate total amount
+            $totalAmount = $this->calculateTotalAmount($validated);
+            
+            // Create the quotation record
+            $quotation = Quotation::create([
+                'reference_number' => Quotation::generateReferenceNumber(),
+                'customer_name' => $validated['customer_details']['first_name'] . ' ' . $validated['customer_details']['last_name'],
+                'customer_email' => $validated['customer_details']['email'],
+                'customer_phone' => $validated['customer_details']['phone'],
+                'customer_address' => $validated['customer_details']['address'],
+                'additional_info' => $validated['customer_details']['additional_info'] ?? null,
+                'window_count' => count($validated['windows']),
+                'total_amount' => $totalAmount,
+                'quotation_data' => $validated,
+            ]);
+            
+            // Create the quotation file record
+            $quotation->file()->create([
+                'filename' => $filename,
+                'path' => $storagePath,
+                'mime_type' => 'application/pdf',
+                'size' => Storage::size($storagePath),
+            ]);
+
+            // Return the file as a download but don't delete it
             return response()->download($tempPath, $filename, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
@@ -69,6 +103,32 @@ class QuotationWizardController extends Controller
         }
 
         return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
+    }
+    
+    /**
+     * Calculate the total amount for a quotation
+     */
+    private function calculateTotalAmount(array $data): float
+    {
+        $total = 0;
+        
+        foreach ($data['windows'] as $window) {
+            $windowTotal = $window['cost'] * ($window['quantity'] ?? 1);
+            
+            // Add extras if any
+            if (isset($window['extras']) && is_array($window['extras'])) {
+                foreach ($window['extras'] as $extra) {
+                    $windowTotal += $extra['cost'] ?? 0;
+                }
+            }
+            
+            $total += $windowTotal;
+        }
+        
+        // Add VAT if applicable (assuming 20% VAT)
+        $vatRate = 0.2; // Default VAT rate
+        
+        return $total * (1 + $vatRate);
     }
 
     /**

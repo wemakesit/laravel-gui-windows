@@ -10,6 +10,7 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         hardware_finish: '',
         cost: 0,
         extras: [],
+        options: 1, // Default to option 1 (can be changed in the Options step)
         additional_info: ''
     };
 

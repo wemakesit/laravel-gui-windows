@@ -5,11 +5,12 @@ import CustomerInfoStep from './Steps/CustomerInfoStep';
 import WindowSelectionStep from './Steps/WindowSelectionStep';
 import WindowConfigStep from './Steps/WindowConfigStep';
 import ExtrasSelectionStep from './Steps/ExtrasSelectionStep';
+import OptionsSelectionStep from './Steps/OptionsSelectionStep';
 import ReviewStep from './Steps/ReviewStep';
 import WizardProgress from './Components/WizardProgress';
 import WizardNavigation from './Components/WizardNavigation';
 
-export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdfTextConfig, loadedQuotation }) {
+export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdfTextConfig, options, loadedQuotation }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
         customer_details: {
@@ -32,7 +33,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const [notification, setNotification] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const totalSteps = 5;
+    const totalSteps = 6;
 
     // Load quotation data if provided
     useEffect(() => {
@@ -216,6 +217,17 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                 );
             case 5:
                 return (
+                    <OptionsSelectionStep
+                        windows={formData.windows}
+                        options={options}
+                        updateWindow={updateWindow}
+                        currentWindow={currentWindow}
+                        setCurrentWindow={setCurrentWindow}
+                        openModal={openModal}
+                    />
+                );
+            case 6:
+                return (
                     <ReviewStep
                         formData={formData}
                         windowTypes={windowTypes}
@@ -223,6 +235,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                         finishes={finishes}
                         companyInfo={companyInfo}
                         pdfTextConfig={pdfTextConfig}
+                        options={options}
                         updateFormData={updateFormData}
                         submitQuotation={submitQuotation}
                     />

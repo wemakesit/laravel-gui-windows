@@ -18,14 +18,16 @@ Route::get('/dashboard', function () {
 
 // Quotation Routes
 Route::get('/quotations', [QuotationController::class, 'index'])->name('quotations.index');
+
+// Quotation Creation Routes - these need to be before the {quotation} routes to avoid conflicts
+Route::get('/quotations/create', [QuotationCreateController::class, 'index'])->name('quotations.create');
+Route::post('/quotations/generate', [QuotationCreateController::class, 'generate'])->name('quotations.generate');
+
+// Quotation Detail Routes - these must come after any specific routes like 'create'
 Route::get('/quotations/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
 Route::get('/quotations/{quotation}/download', [QuotationController::class, 'download'])->name('quotations.download');
 Route::get('/quotations/{quotation}/load', [QuotationController::class, 'load'])->name('quotations.load');
 Route::delete('/quotations/{quotation}', [QuotationController::class, 'destroy'])->name('quotations.destroy');
-
-// Quotation Creation Routes
-Route::get('/quotations/create', [QuotationCreateController::class, 'index'])->name('quotations.create');
-Route::post('/quotations/generate', [QuotationCreateController::class, 'generate'])->name('quotations.generate');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

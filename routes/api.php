@@ -48,3 +48,8 @@ Route::get('/finishes', function (ApiService $apiService) {
 Route::get('/pdf-text-config', function (ApiService $apiService) {
     return $apiService->getPdfTextConfig();
 });
+
+// Options
+Route::get('/options', function (ApiService $apiService) {
+    return $apiService->getOptions();
+});

@@ -1,49 +1,50 @@
 import React, { useState } from 'react';
 
-export default function ReviewStep({ 
-    formData, 
-    windowTypes, 
-    extras, 
-    finishes, 
-    companyInfo, 
+export default function ReviewStep({
+    formData,
+    windowTypes,
+    extras,
+    finishes,
+    companyInfo,
     pdfTextConfig,
+    options,
     updateFormData,
     submitQuotation
 }) {
     const [selectedCaveats, setSelectedCaveats] = useState(formData.selected_caveats || {});
-    
+
     const handleCaveatToggle = (caveat) => {
         const newSelectedCaveats = { ...selectedCaveats };
-        
+
         if (newSelectedCaveats[caveat]) {
             newSelectedCaveats[caveat] = false;
         } else {
             newSelectedCaveats[caveat] = true;
         }
-        
+
         setSelectedCaveats(newSelectedCaveats);
         updateFormData('selected_caveats', newSelectedCaveats);
     };
-    
+
     const calculateWindowTotal = (window) => {
         const basePrice = window.cost || 0;
         const extrasTotal = window.extras?.reduce((total, extra) => total + extra.cost, 0) || 0;
         return (basePrice + extrasTotal) * (window.quantity || 1);
     };
-    
+
     const calculateSubtotal = () => {
         return formData.windows.reduce((total, window) => total + calculateWindowTotal(window), 0);
     };
-    
+
     const calculateVAT = () => {
         const vatRate = pdfTextConfig?.formats?.vat_rate || 0.2;
         return calculateSubtotal() * vatRate;
     };
-    
+
     const calculateTotal = () => {
         return calculateSubtotal() + calculateVAT();
     };
-    
+
     const defaultCaveats = [
         "This quotation is valid for 30 days from the date of issue",
         "A 50% deposit is required to confirm your order",
@@ -51,12 +52,12 @@ export default function ReviewStep({
         "All measurements are subject to survey",
         "Delivery times may vary depending on material availability"
     ];
-    
+
     return (
         <div className="space-y-8">
             <h2 className="text-xl font-semibold">Review Your Quotation</h2>
             <p className="text-gray-600">Please review your quotation details before generating the PDF.</p>
-            
+
             <div className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -87,10 +88,10 @@ export default function ReviewStep({
                     )}
                 </div>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Windows</h3>
-                
+
                 {formData.windows.length > 0 ? (
                     <div className="space-y-6">
                         {formData.windows.map((window, index) => (
@@ -105,7 +106,7 @@ export default function ReviewStep({
                                         <p className="text-base font-medium text-gray-900">£{calculateWindowTotal(window).toFixed(2)}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <p className="text-xs font-medium text-gray-500">Glass Specification</p>
@@ -120,7 +121,7 @@ export default function ReviewStep({
                                         <p className="text-sm text-gray-900">{window.hardware_finish || 'Not specified'}</p>
                                     </div>
                                 </div>
-                                
+
                                 {window.extras && window.extras.length > 0 && (
                                     <div className="mt-4">
                                         <p className="text-xs font-medium text-gray-500">Extras</p>
@@ -134,7 +135,25 @@ export default function ReviewStep({
                                         </ul>
                                     </div>
                                 )}
-                                
+
+                                {window.options && (
+                                    <div className="mt-4">
+                                        <p className="text-xs font-medium text-gray-500">Options</p>
+                                        <p className="text-sm text-gray-600">
+                                            {Array.isArray(window.options)
+                                                ? window.options.map(optionId => {
+                                                    const option = options?.options?.find(o => o.id === optionId);
+                                                    return option ? option.name : `Option ${optionId}`;
+                                                  }).join(', ')
+                                                : (() => {
+                                                    const option = options?.options?.find(o => o.id === window.options);
+                                                    return option ? option.name : `Option ${window.options}`;
+                                                  })()
+                                            }
+                                        </p>
+                                    </div>
+                                )}
+
                                 {window.additional_info && (
                                     <div className="mt-4">
                                         <p className="text-xs font-medium text-gray-500">Additional Information</p>
@@ -143,7 +162,7 @@ export default function ReviewStep({
                                 )}
                             </div>
                         ))}
-                        
+
                         <div className="mt-6 border-t border-gray-200 pt-4">
                             <div className="flex justify-between text-sm">
                                 <span className="font-medium text-gray-700">Subtotal:</span>
@@ -163,11 +182,11 @@ export default function ReviewStep({
                     <p className="text-gray-500">No windows added to this quotation.</p>
                 )}
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Caveats</h3>
                 <p className="text-sm text-gray-600 mb-4">Select the caveats to include in your quotation:</p>
-                
+
                 <div className="space-y-3">
                     {defaultCaveats.map((caveat, index) => (
                         <div key={index} className="flex items-start">
@@ -186,10 +205,10 @@ export default function ReviewStep({
                     ))}
                 </div>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Company Information</h3>
-                
+
                 {companyInfo ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -211,7 +230,7 @@ export default function ReviewStep({
                         <div>
                             <p className="text-sm font-medium text-gray-500">Registration</p>
                             <p className="text-base text-gray-900">
-                                Company No: {companyInfo.registration.company_number} | 
+                                Company No: {companyInfo.registration.company_number} |
                                 VAT No: {companyInfo.registration.vat_number}
                             </p>
                         </div>

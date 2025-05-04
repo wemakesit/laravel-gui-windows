@@ -29,6 +29,7 @@ class QuotationCreateController extends Controller
         $finishes = $this->apiService->getFinishes();
         $companyInfo = $this->apiService->getCompanyInfo();
         $pdfTextConfig = $this->apiService->getPdfTextConfig();
+        $options = $this->apiService->getOptions();
 
         return Inertia::render('Quotation/Wizard', [
             'windowTypes' => $windowTypes,
@@ -36,6 +37,7 @@ class QuotationCreateController extends Controller
             'finishes' => $finishes,
             'companyInfo' => $companyInfo,
             'pdfTextConfig' => $pdfTextConfig,
+            'options' => $options,
             'loadedQuotation' => null, // No quotation loaded by default
         ]);
     }
@@ -67,13 +69,13 @@ class QuotationCreateController extends Controller
 
             // Create a permanent storage path for the PDF
             $storagePath = 'quotations/' . $filename;
-            
+
             // Store the PDF permanently
             Storage::put($storagePath, $result['data']);
-            
+
             // Calculate total amount
             $totalAmount = $this->calculateTotalAmount($validated);
-            
+
             // Create the quotation record
             $quotation = Quotation::create([
                 'reference_number' => Quotation::generateReferenceNumber(),
@@ -86,7 +88,7 @@ class QuotationCreateController extends Controller
                 'total_amount' => $totalAmount,
                 'quotation_data' => $validated,
             ]);
-            
+
             // Create the quotation file record
             $quotation->file()->create([
                 'filename' => $filename,
@@ -104,30 +106,30 @@ class QuotationCreateController extends Controller
 
         return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
     }
-    
+
     /**
      * Calculate the total amount for a quotation
      */
     private function calculateTotalAmount(array $data): float
     {
         $total = 0;
-        
+
         foreach ($data['windows'] as $window) {
             $windowTotal = $window['cost'] * ($window['quantity'] ?? 1);
-            
+
             // Add extras if any
             if (isset($window['extras']) && is_array($window['extras'])) {
                 foreach ($window['extras'] as $extra) {
                     $windowTotal += $extra['cost'] ?? 0;
                 }
             }
-            
+
             $total += $windowTotal;
         }
-        
+
         // Add VAT if applicable (assuming 20% VAT)
         $vatRate = 0.2; // Default VAT rate
-        
+
         return $total * (1 + $vatRate);
     }
 
@@ -152,9 +154,29 @@ class QuotationCreateController extends Controller
             'windows.*.cost' => 'required|numeric',
             'windows.*.quantity' => 'required|integer|min:1',
             'windows.*.extras' => 'nullable|array',
+            'windows.*.options' => 'required', // Accept both integer and array formats
             'selected_caveats' => 'nullable|array',
         ];
 
-        return validator($data, $rules)->validate();
+        // Custom validation for options field to handle both integer and array formats
+        $validator = validator($data, $rules);
+
+        $validator->after(function ($validator) use ($data) {
+            if (isset($data['windows']) && is_array($data['windows'])) {
+                foreach ($data['windows'] as $index => $window) {
+                    if (isset($window['options'])) {
+                        // Check if options is neither an integer nor an array
+                        if (!is_int($window['options']) && !is_array($window['options'])) {
+                            $validator->errors()->add(
+                                "windows.{$index}.options",
+                                'The options field must be either an integer or an array.'
+                            );
+                        }
+                    }
+                }
+            }
+        });
+
+        return $validator->validate();
     }
 }

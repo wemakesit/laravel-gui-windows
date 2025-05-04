@@ -92,6 +92,7 @@ class QuotationController extends Controller
         $finishes = $apiService->getFinishes();
         $companyInfo = $apiService->getCompanyInfo();
         $pdfTextConfig = $apiService->getPdfTextConfig();
+        $options = $apiService->getOptions();
 
         return Inertia::render('Quotation/Wizard', [
             'windowTypes' => $windowTypes,
@@ -99,6 +100,7 @@ class QuotationController extends Controller
             'finishes' => $finishes,
             'companyInfo' => $companyInfo,
             'pdfTextConfig' => $pdfTextConfig,
+            'options' => $options,
             'loadedQuotation' => $quotation->quotation_data,
         ]);
     }

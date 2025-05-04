@@ -402,6 +402,78 @@ class ApiService
     }
 
     /**
+     * Get options
+     */
+    public function getOptions()
+    {
+        try {
+            $response = $this->client->get('/api/v1/config/options');
+            $data = $response->json();
+
+            if (isset($data['error']) || !$response->successful()) {
+                Log::warning('Using mock options data due to API error');
+                return $this->getMockOptions();
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            Log::error('Get Options Error: ' . $e->getMessage());
+            return $this->getMockOptions();
+        }
+    }
+
+    /**
+     * Get mock options data
+     */
+    private function getMockOptions()
+    {
+        return [
+            'options' => [
+                [
+                    'id' => 1,
+                    'name' => 'Option 1',
+                    'description' => 'Standard option with basic features'
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Option 2',
+                    'description' => 'Premium option with enhanced features'
+                ],
+                [
+                    'id' => 3,
+                    'name' => 'Option 3',
+                    'description' => 'Deluxe option with all features included'
+                ],
+                [
+                    'id' => 4,
+                    'name' => 'Option 4',
+                    'description' => 'Custom option with specific features'
+                ]
+            ]
+        ];
+    }
+
+
+
+
+
+    /**
+     * Update options
+     */
+    public function updateOptions(array $data, bool $partial = true)
+    {
+        try {
+            $response = $this->client->put('/api/v1/config/options', $data, [
+                'query' => ['partial' => $partial]
+            ]);
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error('Update Options Error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Update PDF text configuration
      */
     public function updatePdfTextConfig(array $data, bool $partial = true)

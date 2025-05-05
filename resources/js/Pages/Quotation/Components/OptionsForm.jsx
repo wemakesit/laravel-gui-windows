@@ -1,46 +1,71 @@
 import React, { useState } from 'react';
 
 export default function OptionsForm({ windowData, options, onSave, onCancel }) {
-    const [formData, setFormData] = useState(windowData);
-    const [selectedOptions, setSelectedOptions] = useState(
-        Array.isArray(windowData.options) 
-            ? windowData.options.reduce((acc, optionId) => {
+    // Ensure windowData has options field
+    const initialWindowData = {
+        ...windowData,
+        options: windowData.options || 1 // Default to option 1 if not set
+    };
+
+    const [formData, setFormData] = useState(initialWindowData);
+
+    // Initialize selected options, ensuring at least one is selected
+    const [selectedOptions, setSelectedOptions] = useState(() => {
+        if (Array.isArray(initialWindowData.options) && initialWindowData.options.length > 0) {
+            return initialWindowData.options.reduce((acc, optionId) => {
                 acc[optionId] = true;
                 return acc;
-              }, {})
-            : windowData.options
-                ? { [windowData.options]: true }
-                : {}
-    );
-    
+            }, {});
+        } else if (initialWindowData.options) {
+            return { [initialWindowData.options]: true };
+        } else {
+            // Default to option 1 if no options are selected
+            return { 1: true };
+        }
+    });
+
     const handleOptionToggle = (optionId) => {
         const newSelectedOptions = { ...selectedOptions };
-        
+
         if (newSelectedOptions[optionId]) {
-            delete newSelectedOptions[optionId];
+            // Only allow deselecting if there will still be at least one option selected
+            if (Object.keys(newSelectedOptions).length > 1) {
+                delete newSelectedOptions[optionId];
+            } else {
+                // Show a message that at least one option must be selected
+                alert('At least one option must be selected');
+                return;
+            }
         } else {
             newSelectedOptions[optionId] = true;
         }
-        
+
         setSelectedOptions(newSelectedOptions);
-        
+
         // Convert selected options to array for API
         const optionsArray = Object.keys(newSelectedOptions).map(id => parseInt(id, 10));
-        
+
         // If only one option is selected, store it as a number, otherwise as an array
         const optionsValue = optionsArray.length === 1 ? optionsArray[0] : optionsArray;
-        
+
         setFormData({
             ...formData,
             options: optionsValue
         });
     };
-    
+
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        // Ensure there's at least one option selected
+        if (!formData.options || (Array.isArray(formData.options) && formData.options.length === 0)) {
+            alert('Please select at least one option');
+            return;
+        }
+
         onSave(formData);
     };
-    
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -48,7 +73,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                 <p className="text-sm text-gray-500 mb-4">
                     Select which options this window should be included in. A window can be part of multiple options.
                 </p>
-                
+
                 {options?.options?.length > 0 ? (
                     <div className="space-y-4">
                         {options.options.map((option, index) => (
@@ -74,7 +99,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                     <p className="text-gray-500">No options available.</p>
                 )}
             </div>
-            
+
             {Object.keys(selectedOptions).length > 0 && (
                 <div className="mt-6 bg-gray-50 p-4 rounded-md">
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Options</h4>
@@ -90,7 +115,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                     </ul>
                 </div>
             )}
-            
+
             <div className="flex justify-end space-x-3">
                 <button
                     type="button"

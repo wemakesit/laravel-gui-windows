@@ -50,6 +50,21 @@ class QuotationCreateController extends Controller
         // Validate the data
         $validated = $this->validateQuotationData($request->all());
 
+        // Log the validated data for debugging
+        \Log::info('Validated quotation data', ['data' => json_encode($validated)]);
+
+        // Ensure each window has an options field
+        foreach ($validated['windows'] as &$window) {
+            if (!isset($window['options'])) {
+                $window['options'] = 1; // Default to option 1 if not set
+            }
+
+            // If options is an empty array, set it to 1
+            if (is_array($window['options']) && empty($window['options'])) {
+                $window['options'] = 1;
+            }
+        }
+
         $result = $this->apiService->generateQuotation($validated);
 
         if ($result['success']) {
@@ -69,6 +84,11 @@ class QuotationCreateController extends Controller
 
             // Create a permanent storage path for the PDF
             $storagePath = 'quotations/' . $filename;
+
+            // Create the quotations directory if it doesn't exist
+            if (!file_exists(storage_path('app/quotations'))) {
+                mkdir(storage_path('app/quotations'), 0755, true);
+            }
 
             // Store the PDF permanently
             Storage::put($storagePath, $result['data']);
@@ -104,6 +124,7 @@ class QuotationCreateController extends Controller
             ])->deleteFileAfterSend(true);
         }
 
+        \Log::error('Failed to generate quotation', ['error' => $result['error'] ?? 'Unknown error']);
         return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
     }
 

@@ -14,6 +14,9 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
     // Use ref to track previous validation state to prevent unnecessary updates
     const prevValidRef = useRef(false);
 
+    // Use ref to track if initial validation has run
+    const initialValidationDoneRef = useRef(false);
+
     // Function to validate form data - defined outside useEffect to avoid duplication
     const validateFormData = () => {
         const newErrors = {};
@@ -53,12 +56,15 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
             validateStep(1, valid);
             prevValidRef.current = valid;
         }
+
+        // Mark initial validation as done
+        initialValidationDoneRef.current = true;
     }, []); // Empty dependency array means this runs once on mount
 
     // Validate form data when fields change
     useEffect(() => {
-        // Skip validation on first render as it's handled by the mount effect
-        if (prevValidRef.current === false && formData === customerInfo) {
+        // Skip validation if initial validation hasn't run yet
+        if (!initialValidationDoneRef.current) {
             return;
         }
 
@@ -81,14 +87,14 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
         formData.last_name,
         formData.email,
         formData.phone,
-        formData.address,
-        customerInfo // Add customerInfo to dependencies for the initial check
-        // Removed validateStep from dependencies to prevent unnecessary re-renders
+        formData.address
     ]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        // Create the updated data
         const updatedData = { ...formData, [name]: value };
+        // Update local state
         setFormData(updatedData);
         // Only update parent component after state is set
         // This prevents the infinite update loop
@@ -185,14 +191,14 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
         if (selectedValue) {
             const selectedOption = addressOptions.find(option => option.id.toString() === selectedValue);
             if (selectedOption) {
-                setFormData(prevData => {
-                    const updatedData = { ...prevData, address: selectedOption.text };
-                    // Use setTimeout to prevent infinite update loop
-                    setTimeout(() => {
-                        updateCustomerInfo(updatedData);
-                    }, 0);
-                    return updatedData;
-                });
+                // Create the updated data outside the setState callback
+                const updatedData = { ...formData, address: selectedOption.text };
+                // Update local state
+                setFormData(updatedData);
+                // Use setTimeout to prevent infinite update loop
+                setTimeout(() => {
+                    updateCustomerInfo(updatedData);
+                }, 0);
             }
         }
     };
@@ -312,7 +318,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
 
                 <div className="md:col-span-2">
                     <div className="flex justify-between items-center">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label htmlFor={showManualAddress ? "address" : "postcode"} className="block text-sm font-medium text-gray-700">
                             Address <span className="text-red-500">*</span>
                         </label>
                         <button
@@ -330,6 +336,9 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                                 <div className="flex-grow">
                                     <input
                                         type="text"
+                                        id="postcode"
+                                        name="postcode"
+                                        autoComplete="postal-code"
                                         placeholder="Enter postcode (e.g. SW1A 1AA)"
                                         value={postcode}
                                         onChange={(e) => setPostcode(e.target.value)}
@@ -362,6 +371,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                                     </label>
                                     <select
                                         id="address_select"
+                                        name="address_select"
                                         value={selectedAddress}
                                         onChange={handleAddressSelect}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -391,14 +401,14 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                setFormData(prevData => {
-                                                    const updatedData = {...prevData, address: ''};
-                                                    // Use setTimeout to prevent infinite update loop
-                                                    setTimeout(() => {
-                                                        updateCustomerInfo(updatedData);
-                                                    }, 0);
-                                                    return updatedData;
-                                                });
+                                                // Create the updated data outside the setState callback
+                                                const updatedData = {...formData, address: ''};
+                                                // Update local state
+                                                setFormData(updatedData);
+                                                // Use setTimeout to prevent infinite update loop
+                                                setTimeout(() => {
+                                                    updateCustomerInfo(updatedData);
+                                                }, 0);
                                                 setSelectedAddress('');
                                             }}
                                             className="text-xs text-red-600 hover:text-red-800"

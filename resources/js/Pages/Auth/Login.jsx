@@ -66,8 +66,9 @@ export default function Login({ status, canResetPassword }) {
                 </div>
 
                 <div className="mt-4 block">
-                    <label className="flex items-center">
+                    <label htmlFor="remember" className="flex items-center">
                         <Checkbox
+                            id="remember"
                             name="remember"
                             checked={data.remember}
                             onChange={(e) =>

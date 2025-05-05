@@ -85,16 +85,28 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     };
 
     const addWindow = (window) => {
+        // Ensure the window has an options field set
+        const windowWithOptions = {
+            ...window,
+            options: window.options || 1 // Default to option 1 if not set
+        };
+
         setFormData(prevData => ({
             ...prevData,
-            windows: [...prevData.windows, window]
+            windows: [...prevData.windows, windowWithOptions]
         }));
     };
 
     const updateWindow = (index, window) => {
+        // Ensure the window has an options field set
+        const windowWithOptions = {
+            ...window,
+            options: window.options || 1 // Default to option 1 if not set
+        };
+
         setFormData(prevData => {
             const updatedWindows = [...prevData.windows];
-            updatedWindows[index] = window;
+            updatedWindows[index] = windowWithOptions;
             return {
                 ...prevData,
                 windows: updatedWindows

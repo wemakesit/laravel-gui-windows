@@ -303,12 +303,12 @@ class ApiService
                     'name' => 'Polished Brass',
                     'images' => [
                         'sash' => [
-                            'images/ironmongery/sash/brass/sash-fastener.jpg',
-                            'images/ironmongery/sash/brass/sash-lift.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Brass+Sash+Fastener',
+                            'https://via.placeholder.com/200x150.jpg?text=Brass+Sash+Lift'
                         ],
                         'casement' => [
-                            'images/ironmongery/casement/brass/casement-handle.jpg',
-                            'images/ironmongery/casement/brass/casement-lock.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Brass+Casement+Handle',
+                            'https://via.placeholder.com/200x150.jpg?text=Brass+Casement+Lock'
                         ]
                     ]
                 ],
@@ -316,12 +316,12 @@ class ApiService
                     'name' => 'Chrome',
                     'images' => [
                         'sash' => [
-                            'images/ironmongery/sash/chrome/sash-fastener.jpg',
-                            'images/ironmongery/sash/chrome/sash-lift.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Sash+Fastener',
+                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Sash+Lift'
                         ],
                         'casement' => [
-                            'images/ironmongery/casement/chrome/casement-handle.jpg',
-                            'images/ironmongery/casement/chrome/casement-lock.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Casement+Handle',
+                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Casement+Lock'
                         ]
                     ]
                 ],
@@ -329,12 +329,12 @@ class ApiService
                     'name' => 'Satin Chrome',
                     'images' => [
                         'sash' => [
-                            'images/ironmongery/sash/satin/sash-fastener.jpg',
-                            'images/ironmongery/sash/satin/sash-lift.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Satin+Sash+Fastener',
+                            'https://via.placeholder.com/200x150.jpg?text=Satin+Sash+Lift'
                         ],
                         'casement' => [
-                            'images/ironmongery/casement/satin/casement-handle.jpg',
-                            'images/ironmongery/casement/satin/casement-lock.jpg'
+                            'https://via.placeholder.com/200x150.jpg?text=Satin+Casement+Handle',
+                            'https://via.placeholder.com/200x150.jpg?text=Satin+Casement+Lock'
                         ]
                     ]
                 ]
@@ -406,25 +406,11 @@ class ApiService
      */
     public function getOptions()
     {
-        try {
-            $response = $this->client->get('/api/v1/config/options');
-            $data = $response->json();
-
-            if (isset($data['error']) || !$response->successful()) {
-                Log::warning('Using mock options data due to API error');
-                return $this->getMockOptions();
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get Options Error: ' . $e->getMessage());
-            return $this->getMockOptions();
-        }
+        // The API doesn't have a dedicated endpoint for options, so we always use mock data
+        Log::info('Using predefined options data for quotation system');
+        return $this->getMockOptions();
     }
 
-    /**
-     * Get mock options data
-     */
     private function getMockOptions()
     {
         return [
@@ -462,15 +448,8 @@ class ApiService
      */
     public function updateOptions(array $data, bool $partial = true)
     {
-        try {
-            $response = $this->client->put('/api/v1/config/options', $data, [
-                'query' => ['partial' => $partial]
-            ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update Options Error: ' . $e->getMessage());
-            return null;
-        }
+        Log::info('Update options called, but no API endpoint exists for options');
+        return ['status' => 'not_supported'];
     }
 
     /**
@@ -495,15 +474,39 @@ class ApiService
     public function generateQuotation(array $data)
     {
         try {
+            // Log the data being sent to the API for debugging
+            Log::info('Sending quotation data to API', ['data' => json_encode($data)]);
+
+            // Ensure options field is properly formatted for each window
+            if (isset($data['windows']) && is_array($data['windows'])) {
+                foreach ($data['windows'] as &$window) {
+                    // Ensure options is set (default to 1 if not set)
+                    if (!isset($window['options'])) {
+                        $window['options'] = 1;
+                    }
+
+                    // If options is an empty array, set it to 1
+                    if (is_array($window['options']) && empty($window['options'])) {
+                        $window['options'] = 1;
+                    }
+                }
+            }
+
             $response = $this->client->post('/api/v1/quotations', $data);
 
             if ($response->successful()) {
+                Log::info('Quotation generated successfully');
                 return [
                     'success' => true,
                     'data' => $response->body(),
                     'headers' => $response->headers()
                 ];
             }
+
+            Log::error('API returned error for quotation generation', [
+                'status' => $response->status(),
+                'error' => $response->json()
+            ]);
 
             return [
                 'success' => false,

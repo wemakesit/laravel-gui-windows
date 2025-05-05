@@ -8,15 +8,28 @@ export default function WindowConfigForm({ windowData, finishes, onSave, onCance
     useEffect(() => {
         if (formData.hardware_finish && finishes?.hardware_finishes) {
             const selectedFinish = finishes.hardware_finishes.find(f => f.name === formData.hardware_finish);
-            if (selectedFinish?.images?.sash) {
-                setHardwareImages(selectedFinish.images.sash);
+
+            // Check if the window type contains "Sash" or "Casement" to determine which images to show
+            const windowType = formData.type?.toLowerCase() || '';
+            let imageType = 'sash'; // Default to sash
+
+            if (windowType.includes('casement')) {
+                imageType = 'casement';
+            } else if (windowType.includes('sash')) {
+                imageType = 'sash';
+            }
+
+            if (selectedFinish?.images?.[imageType]) {
+                console.log(`Loading ${imageType} images for ${formData.hardware_finish}:`, selectedFinish.images[imageType]);
+                setHardwareImages(selectedFinish.images[imageType]);
             } else {
+                console.log(`No ${imageType} images found for ${formData.hardware_finish}`);
                 setHardwareImages([]);
             }
         } else {
             setHardwareImages([]);
         }
-    }, [formData.hardware_finish, finishes]);
+    }, [formData.hardware_finish, formData.type, finishes]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -94,19 +107,30 @@ export default function WindowConfigForm({ windowData, finishes, onSave, onCance
                     <div className="mt-4">
                         <h3 className="text-sm font-medium text-gray-700 mb-2">Hardware Preview</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            {hardwareImages.map((image, index) => (
-                                <div key={index} className="border rounded-md p-2">
-                                    <img
-                                        src={image}
-                                        alt={`${formData.hardware_finish} hardware`}
-                                        className="w-full h-auto"
-                                        onError={(e) => {
-                                            e.target.onerror = null;
-                                            e.target.src = 'https://via.placeholder.com/150?text=Image+Not+Available';
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                            {hardwareImages.map((image, index) => {
+                                // Use the image path as is if it's an external URL, otherwise make it absolute
+                                const imagePath = image.startsWith('http') ? image : (image.startsWith('/') ? image : `/${image}`);
+
+                                return (
+                                    <div key={index} className="border rounded-md p-2">
+                                        <img
+                                            src={imagePath}
+                                            alt={`${formData.hardware_finish} hardware`}
+                                            className="w-full h-auto"
+                                            onError={(e) => {
+                                                console.log(`Failed to load image: ${imagePath}`);
+                                                e.target.onerror = null;
+                                                e.target.src = 'https://via.placeholder.com/150?text=Hardware+Image';
+                                            }}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1 text-center">
+                                            {image.includes('?text=')
+                                                ? image.split('?text=')[1].replace(/\+/g, ' ')
+                                                : image.split('/').pop().replace('.jpg', '').replace(/-/g, ' ')}
+                                        </p>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

@@ -1,8 +1,8 @@
 import React from 'react';
 import OptionsForm from '../Components/OptionsForm';
 
-export default function OptionsSelectionStep({ 
-    windows, 
+export default function OptionsSelectionStep({
+    windows,
     options,
     updateWindow,
     currentWindow,
@@ -11,9 +11,9 @@ export default function OptionsSelectionStep({
 }) {
     const handleConfigureOptions = (index) => {
         setCurrentWindow(index);
-        
+
         const content = (
-            <OptionsForm 
+            <OptionsForm
                 windowData={windows[index]}
                 options={options}
                 onSave={(windowData) => {
@@ -23,25 +23,31 @@ export default function OptionsSelectionStep({
                 onCancel={closeModal}
             />
         );
-        
+
         openModal({
             title: `Configure Options: ${windows[index].room}`,
             content
         });
     };
-    
+
     const closeModal = () => {
         openModal(null);
     };
-    
+
     const getOptionsCount = (window) => {
         if (Array.isArray(window.options)) {
             return window.options.length;
         }
         return window.options ? 1 : 0;
     };
-    
+
     const getOptionsLabel = (window) => {
+        // Default to option 1 if no options are set
+        if (!window.options) {
+            const defaultOption = options?.options?.find(o => o.id === 1);
+            return defaultOption ? defaultOption.name : 'Standard Package';
+        }
+
         const count = getOptionsCount(window);
         if (count === 0) {
             return 'No options selected';
@@ -53,14 +59,14 @@ export default function OptionsSelectionStep({
             return `${count} options selected`;
         }
     };
-    
+
     return (
         <div>
             <h2 className="text-lg font-medium text-gray-900">Configure Window Options</h2>
             <p className="mt-1 text-sm text-gray-500">
                 Assign each window to one or more options. This allows you to create different combinations of windows for your quotation.
             </p>
-            
+
             {windows.length > 0 ? (
                 <div className="mt-4 space-y-4">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -76,15 +82,15 @@ export default function OptionsSelectionStep({
                             {windows.map((window, index) => {
                                 const optionsCount = getOptionsCount(window);
                                 const optionsLabel = getOptionsLabel(window);
-                                
+
                                 return (
                                     <tr key={index}>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{window.room}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{window.type}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                optionsCount === 0 
-                                                    ? 'bg-red-100 text-red-800' 
+                                                optionsCount === 0
+                                                    ? 'bg-red-100 text-red-800'
                                                     : 'bg-green-100 text-green-800'
                                             }`}>
                                                 {optionsLabel}

@@ -33,6 +33,19 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const [notification, setNotification] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
+    // Track the highest step the user has reached
+    const [highestStepReached, setHighestStepReached] = useState(1);
+
+    // Track validation status for each step
+    const [stepValidation, setStepValidation] = useState({
+        1: false, // Customer Info
+        2: true,  // Window Selection (always valid, even with no windows)
+        3: true,  // Window Configuration (valid if there are no windows)
+        4: true,  // Extras Selection (valid if there are no windows)
+        5: true,  // Options Selection (valid if there are no windows)
+        6: true,  // Review (always valid)
+    });
+
     const totalSteps = 6;
 
     // Load quotation data if provided
@@ -40,6 +53,18 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
         if (loadedQuotation && !isLoaded) {
             setFormData(loadedQuotation);
             setIsLoaded(true);
+
+            // When loading a quotation, set the highest step reached to the total steps
+            // This allows the user to navigate to any step
+            setHighestStepReached(totalSteps);
+
+            // Set all steps as valid when loading an existing quotation
+            const validationState = {};
+            for (let i = 1; i <= totalSteps; i++) {
+                validationState[i] = true;
+            }
+            setStepValidation(validationState);
+
             setNotification({
                 type: 'info',
                 message: 'Quotation loaded successfully. You can now edit and regenerate it.'
@@ -50,7 +75,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                 setNotification(null);
             }, 3000);
         }
-    }, [loadedQuotation, isLoaded]);
+    }, [loadedQuotation, isLoaded, totalSteps]);
 
     const updateFormData = (section, data) => {
         setFormData(prevData => ({
@@ -104,15 +129,49 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
         setModalContent(null);
     };
 
+    // Function to validate a specific step
+    const validateStep = (stepNumber, isValid) => {
+        setStepValidation(prev => ({
+            ...prev,
+            [stepNumber]: isValid
+        }));
+    };
+
     const nextStep = () => {
-        if (currentStep < totalSteps) {
-            setCurrentStep(currentStep + 1);
+        // Only proceed if current step is valid
+        if (stepValidation[currentStep] && currentStep < totalSteps) {
+            const newStep = currentStep + 1;
+            setCurrentStep(newStep);
+
+            // Update highest step reached if moving to a new step
+            if (newStep > highestStepReached) {
+                setHighestStepReached(newStep);
+            }
+        } else if (!stepValidation[currentStep]) {
+            // Show notification if step is not valid
+            setNotification({
+                type: 'error',
+                message: 'Please complete all required fields before proceeding.'
+            });
+
+            // Clear notification after 3 seconds
+            setTimeout(() => {
+                setNotification(null);
+            }, 3000);
         }
     };
 
     const prevStep = () => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
+        }
+    };
+
+    // Custom function to handle direct step navigation from progress bar
+    const goToStep = (stepNumber) => {
+        // Only allow navigation to steps that have been reached or previous steps
+        if (stepNumber <= highestStepReached) {
+            setCurrentStep(stepNumber);
         }
     };
 
@@ -178,6 +237,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                     <CustomerInfoStep
                         customerInfo={formData.customer_details}
                         updateCustomerInfo={(data) => updateFormData('customer_details', data)}
+                        validateStep={validateStep}
                     />
                 );
             case 2:
@@ -290,7 +350,12 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                                 </Link>
                             </div>
 
-                            <WizardProgress currentStep={currentStep} totalSteps={totalSteps} />
+                            <WizardProgress
+                                currentStep={currentStep}
+                                totalSteps={totalSteps}
+                                setCurrentStep={goToStep}
+                                highestStepReached={highestStepReached}
+                            />
 
                             <div className="mt-8">
                                 {renderStep()}
@@ -302,7 +367,7 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                                 nextStep={nextStep}
                                 prevStep={prevStep}
                                 submitQuotation={submitQuotation}
-                                isValid={!isGenerating} // Disable button while generating
+                                isValid={stepValidation[currentStep] && !isGenerating} // Disable button if step is invalid or generating
                             />
                         </div>
                     </div>

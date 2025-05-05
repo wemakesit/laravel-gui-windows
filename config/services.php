@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'postcodes' => [
+        'url' => env('POSTCODES_API_URL', 'https://api.postcodes.io'),
+    ],
+
 ];

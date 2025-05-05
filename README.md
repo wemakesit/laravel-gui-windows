@@ -54,7 +54,12 @@ DB_CONNECTION=sqlite
 
 # API Configuration
 API_BASE_URL=http://localhost:8001
+
+# Postcodes.io API for Address Lookup (free service)
+POSTCODES_API_URL=https://api.postcodes.io
 ```
+
+The application uses the free Postcodes.io API for address lookup, so no API key is required.
 
 ### 5. Set up the database
 
@@ -118,6 +123,19 @@ Generated files and quotations are stored in the `storage/app/` directory. Make 
 ## API Integration
 
 The application integrates with an external API running on port 8001. Ensure the API is running and properly configured in your `.env` file.
+
+## Address Lookup Integration
+
+The application uses the free Postcodes.io API for real UK address lookup by postcode. This service:
+
+- Requires no API key or registration
+- Provides postcode lookup for the entire UK
+- Returns geographic data for postcodes
+- Includes nearby postcodes to provide multiple address options
+
+The implementation creates address suggestions based on the postcode data, allowing users to select from these options or enter their address manually if needed.
+
+Since Postcodes.io is a free service, there are no usage limits to worry about, making it ideal for development and production use.
 
 ## License
 

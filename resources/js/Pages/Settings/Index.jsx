@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Tab } from '@headlessui/react';
 import axios from 'axios';
+import Modal from '@/Components/Modal';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 
 export default function Index({ apiDocs, companyInfo, windowTypes, extras, finishes, pdfTextConfig }) {
     const [selectedTab, setSelectedTab] = useState(0);
     const [apiBaseUrl, setApiBaseUrl] = useState(apiDocs?.apiBaseUrl || 'http://localhost:8001');
     const [apiStatus, setApiStatus] = useState(null);
+
+    // Confirmation modal state
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmationType, setConfirmationType] = useState(null); // 'company_info', 'window_types', 'extras', 'finishes', 'pdf_text'
 
     // Initialize forms for each configuration section
     const companyInfoForm = useForm({
@@ -27,6 +34,21 @@ export default function Index({ apiDocs, companyInfo, windowTypes, extras, finis
         },
     });
 
+    // Window types form
+    const windowTypesForm = useForm({
+        window_types: windowTypes || [],
+    });
+
+    // Extras form
+    const extrasForm = useForm({
+        extras: extras || [],
+    });
+
+    // Finishes form
+    const finishesForm = useForm({
+        finishes: finishes || [],
+    });
+
     // Form for API base URL
     const apiUrlForm = useForm({
         baseUrl: apiBaseUrl,
@@ -43,18 +65,98 @@ export default function Index({ apiDocs, companyInfo, windowTypes, extras, finis
     };
 
     // Handle form submissions
+    const openConfirmModal = (type) => {
+        setConfirmationType(type);
+        setShowConfirmModal(true);
+    };
+
+    const closeConfirmModal = () => {
+        setShowConfirmModal(false);
+        setConfirmationType(null);
+    };
+
+    const handleConfirm = () => {
+        if (confirmationType === 'company_info') {
+            companyInfoForm.post(route('settings.update-company-info'), {
+                onSuccess: () => {
+                    closeConfirmModal();
+                    // Could add a success notification here
+                },
+            });
+        } else if (confirmationType === 'window_types') {
+            // Handle window types update
+            windowTypesForm.post(route('settings.update-window-types'), {
+                onSuccess: () => {
+                    closeConfirmModal();
+                },
+            });
+        } else if (confirmationType === 'extras') {
+            // Handle extras update
+            extrasForm.post(route('settings.update-extras'), {
+                onSuccess: () => {
+                    closeConfirmModal();
+                },
+            });
+        } else if (confirmationType === 'finishes') {
+            // Handle finishes update
+            finishesForm.post(route('settings.update-finishes'), {
+                onSuccess: () => {
+                    closeConfirmModal();
+                },
+            });
+        }
+    };
+
     const submitCompanyInfo = (e) => {
         e.preventDefault();
-        companyInfoForm.post(route('settings.update-company-info'), {
-            onSuccess: () => {
-                // Show success message
-            },
-        });
+        openConfirmModal('company_info');
+    };
+
+    const submitWindowTypes = (e) => {
+        e.preventDefault();
+        openConfirmModal('window_types');
+    };
+
+    const submitExtras = (e) => {
+        e.preventDefault();
+        openConfirmModal('extras');
+    };
+
+    const submitFinishes = (e) => {
+        e.preventDefault();
+        openConfirmModal('finishes');
     };
 
     return (
         <>
             <Head title="Settings" />
+
+            {/* Confirmation Modal */}
+            <Modal show={showConfirmModal} onClose={closeConfirmModal} maxWidth="md">
+                <div className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                        Confirm Update
+                    </h2>
+
+                    <p className="mb-6 text-sm text-gray-600">
+                        {confirmationType === 'company_info' && 'Are you sure you want to update the company information?'}
+                        {confirmationType === 'window_types' && 'Are you sure you want to update the window types?'}
+                        {confirmationType === 'extras' && 'Are you sure you want to update the extras?'}
+                        {confirmationType === 'finishes' && 'Are you sure you want to update the finishes?'}
+                        {confirmationType === 'pdf_text' && 'Are you sure you want to update the PDF text configuration?'}
+                    </p>
+
+                    <div className="mt-6 flex justify-end space-x-3">
+                        <SecondaryButton onClick={closeConfirmModal}>
+                            Cancel
+                        </SecondaryButton>
+
+                        <PrimaryButton onClick={handleConfirm}>
+                            Confirm
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
 
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -279,21 +381,138 @@ export default function Index({ apiDocs, companyInfo, windowTypes, extras, finis
                                     <Tab.Panel>
                                         <div className="rounded-xl bg-white p-3">
                                             <h2 className="text-xl font-semibold mb-4">Window Types</h2>
-                                            <p className="text-gray-500">Window types configuration will be implemented here.</p>
+
+                                            <form onSubmit={submitWindowTypes}>
+                                                <div className="grid grid-cols-1 gap-6 mt-4">
+                                                    {/* Window types form fields would go here */}
+                                                    <p className="text-gray-500 mb-4">Configure window types and their pricing here.</p>
+
+                                                    {/* Example of window types form fields */}
+                                                    <div className="border rounded-md p-4">
+                                                        <h3 className="font-medium mb-2">Window Types Configuration</h3>
+                                                        <p className="text-sm text-gray-500 mb-4">
+                                                            Add, edit, or remove window types that will be available in quotations.
+                                                        </p>
+
+                                                        {/* This would typically be a dynamic list of window types */}
+                                                        <div className="space-y-4">
+                                                            {windowTypes && windowTypes.length > 0 ? (
+                                                                windowTypes.map((type, index) => (
+                                                                    <div key={index} className="border-b pb-4">
+                                                                        <p><strong>Name:</strong> {type.name}</p>
+                                                                        <p><strong>Description:</strong> {type.description}</p>
+                                                                        <p><strong>Base Price:</strong> £{type.base_price}</p>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <p>No window types configured yet.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <button
+                                                            type="submit"
+                                                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                                            disabled={windowTypesForm.processing}
+                                                        >
+                                                            {windowTypesForm.processing ? 'Saving...' : 'Save Window Types'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
                                         </div>
                                     </Tab.Panel>
 
                                     <Tab.Panel>
                                         <div className="rounded-xl bg-white p-3">
                                             <h2 className="text-xl font-semibold mb-4">Extras</h2>
-                                            <p className="text-gray-500">Extras configuration will be implemented here.</p>
+
+                                            <form onSubmit={submitExtras}>
+                                                <div className="grid grid-cols-1 gap-6 mt-4">
+                                                    {/* Extras form fields would go here */}
+                                                    <p className="text-gray-500 mb-4">Configure additional options and extras for windows.</p>
+
+                                                    {/* Example of extras form fields */}
+                                                    <div className="border rounded-md p-4">
+                                                        <h3 className="font-medium mb-2">Extras Configuration</h3>
+                                                        <p className="text-sm text-gray-500 mb-4">
+                                                            Add, edit, or remove extras that can be added to windows in quotations.
+                                                        </p>
+
+                                                        {/* This would typically be a dynamic list of extras */}
+                                                        <div className="space-y-4">
+                                                            {extras && extras.length > 0 ? (
+                                                                extras.map((extra, index) => (
+                                                                    <div key={index} className="border-b pb-4">
+                                                                        <p><strong>Name:</strong> {extra.name}</p>
+                                                                        <p><strong>Description:</strong> {extra.description}</p>
+                                                                        <p><strong>Price:</strong> £{extra.price}</p>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <p>No extras configured yet.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <button
+                                                            type="submit"
+                                                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                                            disabled={extrasForm.processing}
+                                                        >
+                                                            {extrasForm.processing ? 'Saving...' : 'Save Extras'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
                                         </div>
                                     </Tab.Panel>
 
                                     <Tab.Panel>
                                         <div className="rounded-xl bg-white p-3">
                                             <h2 className="text-xl font-semibold mb-4">Finishes</h2>
-                                            <p className="text-gray-500">Finishes configuration will be implemented here.</p>
+
+                                            <form onSubmit={submitFinishes}>
+                                                <div className="grid grid-cols-1 gap-6 mt-4">
+                                                    {/* Finishes form fields would go here */}
+                                                    <p className="text-gray-500 mb-4">Configure available finishes for windows.</p>
+
+                                                    {/* Example of finishes form fields */}
+                                                    <div className="border rounded-md p-4">
+                                                        <h3 className="font-medium mb-2">Finishes Configuration</h3>
+                                                        <p className="text-sm text-gray-500 mb-4">
+                                                            Add, edit, or remove finishes that can be applied to windows in quotations.
+                                                        </p>
+
+                                                        {/* This would typically be a dynamic list of finishes */}
+                                                        <div className="space-y-4">
+                                                            {finishes && finishes.length > 0 ? (
+                                                                finishes.map((finish, index) => (
+                                                                    <div key={index} className="border-b pb-4">
+                                                                        <p><strong>Name:</strong> {finish.name}</p>
+                                                                        <p><strong>Description:</strong> {finish.description}</p>
+                                                                        <p><strong>Price Modifier:</strong> {finish.price_modifier}%</p>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <p>No finishes configured yet.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-6">
+                                                        <button
+                                                            type="submit"
+                                                            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                                            disabled={finishesForm.processing}
+                                                        >
+                                                            {finishesForm.processing ? 'Saving...' : 'Save Finishes'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
                                         </div>
                                     </Tab.Panel>
 

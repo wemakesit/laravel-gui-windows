@@ -51,6 +51,13 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     // Load quotation data if provided
     useEffect(() => {
         if (loadedQuotation && !isLoaded) {
+            console.log('Wizard: Loading quotation data', loadedQuotation);
+
+            // Log the customer details specifically
+            if (loadedQuotation.customer_details) {
+                console.log('Wizard: Customer details from loaded quotation', loadedQuotation.customer_details);
+            }
+
             setFormData(loadedQuotation);
             setIsLoaded(true);
 

@@ -17,6 +17,9 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
     // Use ref to track if initial validation has run
     const initialValidationDoneRef = useRef(false);
 
+    // Add a ref to track if an update is coming from the parent
+    const isParentUpdateRef = useRef(false);
+
     // Function to validate form data - defined outside useEffect to avoid duplication
     const validateFormData = () => {
         const newErrors = {};
@@ -43,6 +46,8 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
 
     // Run initial validation when component mounts
     useEffect(() => {
+        console.log('CustomerInfoStep: Initial mount with customerInfo', customerInfo);
+
         // Validate the form data
         const newErrors = validateFormData();
         setErrors(newErrors);
@@ -96,6 +101,14 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
         const updatedData = { ...formData, [name]: value };
         // Update local state
         setFormData(updatedData);
+
+        // Only update parent component if this is not an update from the parent
+        if (isParentUpdateRef.current) {
+            // Reset the ref for future user interactions
+            isParentUpdateRef.current = false;
+            return;
+        }
+
         // Only update parent component after state is set
         // This prevents the infinite update loop
         setTimeout(() => {
@@ -104,6 +117,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
     };
 
     // State to store API configuration
+    // eslint-disable-next-line no-unused-vars
     const [addressApiConfig, setAddressApiConfig] = useState({
         url: ''
     });
@@ -121,6 +135,38 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
 
         fetchAddressApiConfig();
     }, []);
+
+    // Update local state when customerInfo changes (e.g., when a saved quotation is loaded)
+    useEffect(() => {
+        // Skip if customerInfo is empty
+        if (customerInfo && Object.keys(customerInfo).length > 0) {
+            // Create a normalized copy of customerInfo with title defaulted to empty string if undefined
+            const normalizedCustomerInfo = {
+                ...customerInfo,
+                title: customerInfo.title || ''
+            };
+
+            // Create a normalized copy of formData with title defaulted to empty string if undefined
+            const normalizedFormData = {
+                ...formData,
+                title: formData.title || ''
+            };
+
+            // Check if the normalized objects are different to prevent infinite loops
+            const customerInfoStr = JSON.stringify(normalizedCustomerInfo);
+            const formDataStr = JSON.stringify(normalizedFormData);
+
+            console.log('CustomerInfoStep: Comparing normalized data');
+            console.log('CustomerInfoStep: normalizedCustomerInfo.title =', normalizedCustomerInfo.title);
+            console.log('CustomerInfoStep: normalizedFormData.title =', normalizedFormData.title);
+
+            if (customerInfoStr !== formDataStr) {
+                console.log('CustomerInfoStep: Updating formData from customerInfo prop');
+                isParentUpdateRef.current = true;
+                setFormData(normalizedCustomerInfo);
+            }
+        }
+    }, [customerInfo, formData]);
 
     const lookupPostcode = async () => {
         if (!postcode.trim()) {
@@ -195,6 +241,14 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                 const updatedData = { ...formData, address: selectedOption.text };
                 // Update local state
                 setFormData(updatedData);
+
+                // Only update parent component if this is not an update from the parent
+                if (isParentUpdateRef.current) {
+                    // Reset the ref for future user interactions
+                    isParentUpdateRef.current = false;
+                    return;
+                }
+
                 // Use setTimeout to prevent infinite update loop
                 setTimeout(() => {
                     updateCustomerInfo(updatedData);
@@ -223,8 +277,11 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                     <select
                         id="title"
                         name="title"
-                        value={formData.title || ''}
-                        onChange={handleChange}
+                        value={formData.title || ''} // Ensure title is defaulted to empty string
+                        onChange={(e) => {
+                            console.log('Title changed to:', e.target.value);
+                            handleChange(e);
+                        }}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                         <option value="">Select a title</option>
@@ -405,10 +462,18 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                                                 const updatedData = {...formData, address: ''};
                                                 // Update local state
                                                 setFormData(updatedData);
-                                                // Use setTimeout to prevent infinite update loop
-                                                setTimeout(() => {
-                                                    updateCustomerInfo(updatedData);
-                                                }, 0);
+
+                                                // Only update parent component if this is not an update from the parent
+                                                if (!isParentUpdateRef.current) {
+                                                    // Use setTimeout to prevent infinite update loop
+                                                    setTimeout(() => {
+                                                        updateCustomerInfo(updatedData);
+                                                    }, 0);
+                                                } else {
+                                                    // Reset the ref for future user interactions
+                                                    isParentUpdateRef.current = false;
+                                                }
+
                                                 setSelectedAddress('');
                                             }}
                                             className="text-xs text-red-600 hover:text-red-800"

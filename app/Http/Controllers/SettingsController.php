@@ -21,7 +21,7 @@ class SettingsController extends Controller
      */
     public function index()
     {
-        // Get API documentation
+        // Get documentation
         $apiDocs = $this->getApiDocs();
 
         // Get configuration data

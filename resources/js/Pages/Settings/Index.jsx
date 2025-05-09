@@ -163,7 +163,7 @@ export default function Index({ apiDocs, companyInfo, windowTypes, extras, finis
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900">
                             <div className="flex justify-between items-center mb-6">
-                                <h1 className="text-2xl font-semibold">API Settings</h1>
+                                <h1 className="text-2xl font-semibold">Settings</h1>
                                 <Link
                                     href={route('quotations.index')}
                                     className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\QuotationCreateController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +29,17 @@ Route::get('/quotations/{quotation}', [QuotationController::class, 'show'])->nam
 Route::get('/quotations/{quotation}/download', [QuotationController::class, 'download'])->name('quotations.download');
 Route::get('/quotations/{quotation}/load', [QuotationController::class, 'load'])->name('quotations.load');
 Route::delete('/quotations/{quotation}', [QuotationController::class, 'destroy'])->name('quotations.destroy');
+
+// Settings Routes
+Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+Route::post('/settings/company-info', [SettingsController::class, 'updateCompanyInfo'])->name('settings.update-company-info');
+Route::post('/settings/window-types', [SettingsController::class, 'updateWindowTypes'])->name('settings.update-window-types');
+Route::post('/settings/extras', [SettingsController::class, 'updateExtras'])->name('settings.update-extras');
+Route::post('/settings/finishes', [SettingsController::class, 'updateFinishes'])->name('settings.update-finishes');
+Route::post('/settings/pdf-text-config', [SettingsController::class, 'updatePdfTextConfig'])->name('settings.update-pdf-text-config');
+
+// API Proxy Route - to avoid CORS issues when accessing the API directly from the browser
+Route::any('/api-proxy/{path?}', [SettingsController::class, 'proxyApiRequest'])->where('path', '.*')->name('api.proxy');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

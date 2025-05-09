@@ -19,12 +19,20 @@ export default function Index({ quotations }) {
                         <div className="p-6 text-gray-900">
                             <div className="flex justify-between items-center mb-6">
                                 <h1 className="text-2xl font-semibold">Window Quotations</h1>
-                                <Link
-                                    href={route('quotations.create')}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                >
-                                    Create New Quotation
-                                </Link>
+                                <div className="flex space-x-2">
+                                    <Link
+                                        href={route('settings.index')}
+                                        className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                                    >
+                                        Settings
+                                    </Link>
+                                    <Link
+                                        href={route('quotations.create')}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    >
+                                        Create New Quotation
+                                    </Link>
+                                </div>
                             </div>
 
                             {quotations.length === 0 ? (

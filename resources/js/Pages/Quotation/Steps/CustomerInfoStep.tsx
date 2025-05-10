@@ -1,13 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, validateStep }) {
-    const [formData, setFormData] = useState(customerInfo);
-    const [errors, setErrors] = useState({});
+interface CustomerInfo {
+    title?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    additional_info?: string;
+    [key: string]: any;
+}
+
+interface AddressOption {
+    id: string | number;
+    text: string;
+}
+
+interface CustomerInfoStepProps {
+    customerInfo: CustomerInfo;
+    updateCustomerInfo: (data: CustomerInfo) => void;
+    validateStep: (step: number, isValid: boolean) => void;
+}
+
+interface FormErrors {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    postcode?: string;
+    [key: string]: string | undefined;
+}
+
+export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, validateStep }: CustomerInfoStepProps) {
+    const [formData, setFormData] = useState<CustomerInfo>(customerInfo);
+    const [errors, setErrors] = useState<FormErrors>({});
     const [isValid, setIsValid] = useState(false);
     const [postcode, setPostcode] = useState('');
     const [isLookingUpPostcode, setIsLookingUpPostcode] = useState(false);
-    const [addressOptions, setAddressOptions] = useState([]);
+    const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
     const [selectedAddress, setSelectedAddress] = useState('');
     const [showManualAddress, setShowManualAddress] = useState(false);
 
@@ -22,7 +54,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
 
     // Function to validate form data - defined outside useEffect to avoid duplication
     const validateFormData = () => {
-        const newErrors = {};
+        const newErrors: FormErrors = {};
 
         // Required fields validation
         if (!formData.first_name?.trim()) newErrors.first_name = 'First name is required';
@@ -95,7 +127,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
         formData.address
     ]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         // Create the updated data
         const updatedData = { ...formData, [name]: value };
@@ -278,7 +310,7 @@ export default function CustomerInfoStep({ customerInfo, updateCustomerInfo, val
                         id="title"
                         name="title"
                         value={formData.title || ''} // Ensure title is defaulted to empty string
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                             console.log('Title changed to:', e.target.value);
                             handleChange(e);
                         }}

@@ -15,6 +15,7 @@ interface PageProps {
     auth: {
         user: User;
     };
+    [key: string]: any;
 }
 
 interface AuthenticatedLayoutProps {

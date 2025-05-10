@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
 
+interface ReviewStepProps {
+    formData: any;
+    windowTypes: any;
+    extras: any;
+    finishes: any;
+    companyInfo: any;
+    pdfTextConfig: any;
+    options: any;
+    updateFormData: (section: string, data: any) => void;
+    submitQuotation: () => void;
+}
+
 export default function ReviewStep({
     formData,
     windowTypes,
@@ -10,11 +22,11 @@ export default function ReviewStep({
     options,
     updateFormData,
     submitQuotation
-}) {
+}: ReviewStepProps) {
     const [selectedCaveats, setSelectedCaveats] = useState(formData.selected_caveats || {});
 
-    const handleCaveatToggle = (caveat) => {
-        const newSelectedCaveats = { ...selectedCaveats };
+    const handleCaveatToggle = (caveat: string) => {
+        const newSelectedCaveats: Record<string, boolean> = { ...selectedCaveats };
 
         if (newSelectedCaveats[caveat]) {
             newSelectedCaveats[caveat] = false;

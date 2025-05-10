@@ -66,11 +66,11 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
             setHighestStepReached(totalSteps);
 
             // Set all steps as valid when loading an existing quotation
-            const validationState = {};
+            const validationState: Record<number, boolean> = {};
             for (let i = 1; i <= totalSteps; i++) {
                 validationState[i] = true;
             }
-            setStepValidation(validationState);
+            setStepValidation(validationState as { 1: boolean; 2: boolean; 3: boolean; 4: boolean; 5: boolean; 6: boolean; });
 
             setNotification({
                 type: 'info',

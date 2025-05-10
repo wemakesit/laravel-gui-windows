@@ -5,6 +5,13 @@ interface Window {
     room: string;
     type: string;
     quantity: number;
+    cost: number;
+    glass_specification?: string;
+    paint_finish?: string;
+    hardware_finish?: string;
+    extras?: any[];
+    options?: number;
+    additional_info?: string;
     [key: string]: any;
 }
 
@@ -39,7 +46,7 @@ export default function WindowSelectionStep({
 
         const content = (
             <WindowForm
-                windowTypes={windowTypes}
+                windowTypes={{ window_types: windowTypes }}
                 onSave={(windowData) => {
                     addWindow(windowData);
                     closeModal();
@@ -60,7 +67,7 @@ export default function WindowSelectionStep({
         const content = (
             <WindowForm
                 windowData={windows[index]}
-                windowTypes={windowTypes}
+                windowTypes={{ window_types: windowTypes }}
                 onSave={(windowData) => {
                     updateWindow(index, windowData);
                     closeModal();

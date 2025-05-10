@@ -6,14 +6,14 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
-// Add type declaration for import.meta
-declare global {
-    interface ImportMeta {
-        env: {
-            VITE_APP_NAME?: string;
-        };
-        glob: (path: string) => Record<string, () => Promise<any>>;
-    }
+// Add type augmentation for import.meta
+interface ImportMetaEnv {
+    VITE_APP_NAME?: string;
+}
+
+// Augment the existing ImportMeta interface from Vite
+interface ImportMeta {
+    readonly glob: (path: string) => Record<string, () => Promise<any>>;
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';

@@ -1,7 +1,37 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
 
-export default function WindowForm({ windowData, windowTypes, onSave, onCancel }) {
+interface WindowData {
+    room: string;
+    type: string;
+    quantity: number;
+    glass_specification?: string;
+    paint_finish?: string;
+    hardware_finish?: string;
+    cost: number;
+    extras?: any[];
+    options?: number;
+    additional_info?: string;
+    [key: string]: any;
+}
+
+interface WindowType {
+    Type: string;
+    Description?: string;
+    Cost?: number;
+    BasePrice?: number;
+}
+
+interface WindowFormProps {
+    windowData?: WindowData;
+    windowTypes: WindowType[] | {
+        window_types?: WindowType[];
+    };
+    onSave: (windowData: WindowData) => void;
+    onCancel: () => void;
+}
+
+export default function WindowForm({ windowData, windowTypes, onSave, onCancel }: WindowFormProps) {
     const defaultWindow = {
         room: '',
         type: '',
@@ -29,8 +59,13 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
     ]);
 
     useEffect(() => {
-        if (formData.type && windowTypes?.window_types) {
-            const type = windowTypes.window_types.find(t => t.Type === formData.type);
+        if (formData.type) {
+            // Handle both formats of windowTypes
+            const typesToSearch = Array.isArray(windowTypes)
+                ? windowTypes
+                : (windowTypes?.window_types || []);
+
+            const type = typesToSearch.find(t => t.Type === formData.type);
             if (type) {
                 setSelectedType(type);
                 if (!windowData) {
@@ -50,7 +85,7 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         }
     }, [windowData]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
 
         if (name === 'quantity') {
@@ -67,9 +102,14 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
     };
 
     // Handle window type selection from combobox
-    const handleWindowTypeChange = (selectedValue) => {
-        if (selectedValue && windowTypes?.window_types) {
-            const type = windowTypes.window_types.find(t => t.Type === selectedValue);
+    const handleWindowTypeChange = (selectedValue: string) => {
+        if (selectedValue) {
+            // Handle both formats of windowTypes
+            const typesToSearch = Array.isArray(windowTypes)
+                ? windowTypes
+                : (windowTypes?.window_types || []);
+
+            const type = typesToSearch.find(t => t.Type === selectedValue);
             if (type) {
                 setFormData({
                     ...formData,
@@ -99,10 +139,17 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         onSave(formData);
     };
 
+    // Get the window types array from either format
+    const getWindowTypesArray = () => {
+        return Array.isArray(windowTypes)
+            ? windowTypes
+            : (windowTypes?.window_types || []);
+    };
+
     // Filter window types based on search query
     const filteredWindowTypes = windowTypeQuery === ''
-        ? windowTypes?.window_types || []
-        : windowTypes?.window_types?.filter((type) =>
+        ? getWindowTypesArray()
+        : getWindowTypesArray().filter((type) =>
             type.Type.toLowerCase().includes(windowTypeQuery.toLowerCase())
         );
 

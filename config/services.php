@@ -39,4 +39,13 @@ return [
         'url' => env('POSTCODES_API_URL', 'https://api.postcodes.io'),
     ],
 
+    'api' => [
+        'base_url' => env('API_BASE_URL', 'http://localhost:8001'),
+        'token' => env('API_TOKEN'),
+        'max_retries' => env('API_MAX_RETRIES', 3),
+        'retry_delay' => env('API_RETRY_DELAY', 100), // milliseconds
+        'verify_ssl' => env('API_VERIFY_SSL', false),
+        'connect_timeout' => env('API_CONNECT_TIMEOUT', 5), // seconds
+    ],
+
 ];

@@ -4,515 +4,468 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
+use Exception;
 
 class ApiService
 {
+    /**
+     * The base URL for the API
+     *
+     * @var string
+     */
     protected string $baseUrl;
+
+    /**
+     * The HTTP client instance
+     *
+     * @var PendingRequest
+     */
     protected PendingRequest $client;
 
+    /**
+     * Maximum number of retry attempts for API calls
+     *
+     * @var int
+     */
+    protected int $maxRetries;
+
+    /**
+     * Retry delay in milliseconds
+     *
+     * @var int
+     */
+    protected int $retryDelay;
+
+    /**
+     * API token for authentication
+     *
+     * @var string|null
+     */
+    protected ?string $apiToken;
+
+    /**
+     * Create a new API service instance
+     *
+     * @return void
+     */
     public function __construct()
     {
-        // Use environment variable if available, otherwise default to localhost:8001
-        $this->baseUrl = env('API_BASE_URL', 'http://localhost:8001');
+        // Use config instead of env directly for better caching
+        $this->baseUrl = Config::get('services.api.base_url', 'http://localhost:8001');
+        $this->maxRetries = Config::get('services.api.max_retries', 3);
+        $this->retryDelay = Config::get('services.api.retry_delay', 100);
+        $this->apiToken = Config::get('services.api.token');
 
         // Configure HTTP client with more detailed options
         $this->client = Http::baseUrl($this->baseUrl)
             ->acceptJson()
             ->timeout(30)
             ->withOptions([
-                'verify' => false, // Disable SSL verification for local development
-                'connect_timeout' => 5, // Set connection timeout
+                'verify' => Config::get('services.api.verify_ssl', false),
+                'connect_timeout' => Config::get('services.api.connect_timeout', 5),
             ]);
 
-        Log::info('ApiService initialized with base URL: ' . $this->baseUrl);
+        // Add API token if available
+        if ($this->apiToken) {
+            $this->client = $this->client->withToken($this->apiToken);
+        }
+
+        Log::info('ApiService initialized', ['base_url' => $this->baseUrl]);
+    }
+
+    /**
+     * Process API response with standardized error handling
+     *
+     * @param string $endpoint The API endpoint that was called
+     * @param callable $apiCall The API call function to execute with retry logic
+     * @param bool $allowFailure Whether to return an error response instead of throwing an exception
+     * @return array<string, mixed> The processed API response
+     * @throws RequestException When the API request fails and $allowFailure is false
+     */
+    protected function processApiCall(string $endpoint, callable $apiCall, bool $allowFailure = true): array
+    {
+        try {
+            // Execute the API call with retry logic
+            $response = null;
+
+            for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
+                try {
+                    $response = $apiCall();
+                    break; // If successful, exit the retry loop
+                } catch (ConnectionException $e) {
+                    if ($attempt === $this->maxRetries) {
+                        throw $e; // Rethrow if we've exhausted retries
+                    }
+                    Log::warning("API connection retry {$attempt}/{$this->maxRetries} for {$endpoint}: {$e->getMessage()}");
+                    usleep($this->retryDelay * 1000 * $attempt); // Exponential backoff
+                } catch (RequestException $e) {
+                    if ($e->response->status() < 500 || $attempt === $this->maxRetries) {
+                        throw $e; // Don't retry client errors or if we've exhausted retries
+                    }
+                    Log::warning("API request retry {$attempt}/{$this->maxRetries} for {$endpoint}: {$e->getMessage()}");
+                    usleep($this->retryDelay * 1000 * $attempt); // Exponential backoff
+                }
+            }
+
+            // If we got here without a response, something went wrong
+            if (!$response) {
+                throw new Exception("Failed to get response after {$this->maxRetries} attempts");
+            }
+
+            // Check if the response is successful
+            if ($response->successful()) {
+                $data = $response->json() ?? [];
+                Log::debug("API call to {$endpoint} successful", ['status' => $response->status()]);
+                return $data;
+            }
+
+            // Log the error response
+            Log::error("API call to {$endpoint} failed", [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'headers' => $response->headers()
+            ]);
+
+            // If we allow failure, return an error response
+            if ($allowFailure) {
+                return [
+                    'error' => true,
+                    'message' => "API call to {$endpoint} failed with status {$response->status()}",
+                    'status' => $response->status(),
+                    'data' => $response->json() ?? []
+                ];
+            }
+
+            // Otherwise, throw the exception
+            $response->throw();
+
+            // This line will never be reached, but it's here for completeness
+            return [];
+        } catch (RequestException $e) {
+            Log::error("API request exception for {$endpoint}", [
+                'message' => $e->getMessage(),
+                'status' => $e->response->status() ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($allowFailure) {
+                return [
+                    'error' => true,
+                    'message' => $e->getMessage(),
+                    'status' => $e->response->status() ?? 500
+                ];
+            }
+
+            throw $e;
+        } catch (ConnectionException $e) {
+            Log::error("API connection exception for {$endpoint}", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($allowFailure) {
+                return [
+                    'error' => true,
+                    'message' => "Connection error: {$e->getMessage()}",
+                    'status' => 503 // Service Unavailable
+                ];
+            }
+
+            throw $e;
+        } catch (Exception $e) {
+            Log::error("Unexpected exception for {$endpoint}", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if ($allowFailure) {
+                return [
+                    'error' => true,
+                    'message' => "Unexpected error: {$e->getMessage()}",
+                    'status' => 500 // Internal Server Error
+                ];
+            }
+
+            throw $e;
+        }
     }
 
     /**
      * Get health status of the API
+     *
+     * @return array<string, mixed> Health status information
      */
-    public function getHealth()
+    public function getHealth(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/health');
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('API Health Check Error: ' . $e->getMessage());
-            return ['status' => 'error', 'message' => $e->getMessage()];
-        }
+        return $this->processApiCall('/api/v1/health', function () {
+            return $this->client->get('/api/v1/health');
+        });
     }
 
     /**
      * Get company information
+     *
+     * @return array<string, mixed> Company information data
      */
-    public function getCompanyInfo()
+    public function getCompanyInfo(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/config/company_info');
-            $data = $response->json();
-
-            if (isset($data['error'])) {
-                return $this->getMockCompanyInfo();
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get Company Info Error: ' . $e->getMessage());
-            return $this->getMockCompanyInfo();
-        }
-    }
-
-    /**
-     * Get mock company info data
-     */
-    private function getMockCompanyInfo()
-    {
-        return [
-            'name' => 'Premium Windows Ltd',
-            'address' => [
-                'line1' => '123 Window Street',
-                'line2' => 'London, SW1A 1AA',
-                'country' => 'United Kingdom'
-            ],
-            'contact' => [
-                'phone' => '020 1234 5678',
-                'email' => 'info@premiumwindows.example.com',
-                'website' => 'www.premiumwindows.example.com'
-            ],
-            'registration' => [
-                'company_number' => '12345678',
-                'vat_number' => 'GB123456789'
-            ],
-            'logo' => 'images/logo.png'
-        ];
+        return $this->processApiCall('/api/v1/config/company_info', function () {
+            return $this->client->get('/api/v1/config/company_info');
+        });
     }
 
     /**
      * Update company information
+     *
+     * @param array<string, mixed> $data The company information data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updateCompanyInfo(array $data, bool $partial = true)
+    public function updateCompanyInfo(array $data, bool $partial = true): array
     {
-        try {
-            $response = $this->client->put('/api/v1/config/company_info', $data, [
+        return $this->processApiCall('/api/v1/config/company_info', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/company_info', [
+                'json' => $data,
                 'query' => ['partial' => $partial]
             ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update Company Info Error: ' . $e->getMessage());
-            return null;
-        }
+        }, false);
     }
 
     /**
      * Get window types
+     *
+     * @return array<string, mixed> Window types data
      */
-    public function getWindowTypes()
+    public function getWindowTypes(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/config/window_types');
-            $data = $response->json();
-
-            // If there's an error or the API returns an error response, use mock data
-            if (isset($data['error']) || !$response->successful()) {
-                Log::warning('Using mock window types data due to API error');
-                return $this->getMockWindowTypes();
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get Window Types Error: ' . $e->getMessage());
-            return $this->getMockWindowTypes();
-        }
-    }
-
-    /**
-     * Get mock window types data
-     */
-    private function getMockWindowTypes()
-    {
-        return [
-            'window_types' => [
-                [
-                    'Type' => 'Softwood Sash Window S',
-                    'Description' => 'Softwood Sash Window with traditional styling',
-                    'BasePrice' => 1350.0
-                ],
-                [
-                    'Type' => 'Softwood Casement Window S',
-                    'Description' => 'Softwood Casement Window with traditional styling',
-                    'BasePrice' => 1150.0
-                ],
-                [
-                    'Type' => 'Accoya Sash Window S',
-                    'Description' => 'Accoya Sash Window with traditional styling',
-                    'BasePrice' => 1850.0
-                ],
-                [
-                    'Type' => 'Accoya Casement Window S',
-                    'Description' => 'Accoya Casement Window with traditional styling',
-                    'BasePrice' => 1650.0
-                ]
-            ]
-        ];
+        return $this->processApiCall('/api/v1/config/window_types', function () {
+            return $this->client->get('/api/v1/config/window_types');
+        });
     }
 
     /**
      * Update window types
+     *
+     * @param array<string, mixed> $data The window types data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updateWindowTypes(array $data, bool $partial = true)
+    public function updateWindowTypes(array $data, bool $partial = true): array
     {
-        try {
-            $response = $this->client->put('/api/v1/config/window_types', $data, [
+        return $this->processApiCall('/api/v1/config/window_types', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/window_types', [
+                'json' => $data,
                 'query' => ['partial' => $partial]
             ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update Window Types Error: ' . $e->getMessage());
-            return null;
-        }
+        }, false);
     }
 
     /**
      * Get extras
+     *
+     * @return array<string, mixed> Extras data
      */
-    public function getExtras()
+    public function getExtras(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/config/extras');
-            $data = $response->json();
-
-            if (isset($data['error'])) {
-                return $this->getMockExtras();
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get Extras Error: ' . $e->getMessage());
-            return $this->getMockExtras();
-        }
-    }
-
-    /**
-     * Get mock extras data
-     */
-    private function getMockExtras()
-    {
-        return [
-            'extras' => [
-                [
-                    'Name' => 'Satin Glass',
-                    'Description' => 'Privacy glass with a frosted appearance',
-                    'Cost' => 50.0
-                ],
-                [
-                    'Name' => 'Sapele Hardwood Sill',
-                    'Description' => 'Premium hardwood sill for enhanced durability',
-                    'Cost' => 135.0
-                ],
-                [
-                    'Name' => 'Windowboard',
-                    'Description' => 'Interior windowboard to match your window',
-                    'Cost' => 66.0
-                ]
-            ]
-        ];
+        return $this->processApiCall('/api/v1/config/extras', function () {
+            return $this->client->get('/api/v1/config/extras');
+        });
     }
 
     /**
      * Update extras
+     *
+     * @param array<string, mixed> $data The extras data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updateExtras(array $data, bool $partial = true)
+    public function updateExtras(array $data, bool $partial = true): array
     {
-        try {
-            $response = $this->client->put('/api/v1/config/extras', $data, [
+        return $this->processApiCall('/api/v1/config/extras', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/extras', [
+                'json' => $data,
                 'query' => ['partial' => $partial]
             ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update Extras Error: ' . $e->getMessage());
-            return null;
-        }
+        }, false);
     }
 
     /**
      * Get finishes
+     *
+     * @return array<string, mixed> Finishes data
      */
-    public function getFinishes()
+    public function getFinishes(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/config/finishes');
-            $data = $response->json();
+        $data = $this->processApiCall('/api/v1/config/finishes', function () {
+            return $this->client->get('/api/v1/config/finishes');
+        });
 
-            if (isset($data['error'])) {
-                return $this->getMockFinishes();
-            }
-
-            // Transform complex objects to simple strings if needed
-            if (isset($data['glass_specifications']) && is_array($data['glass_specifications'])) {
-                $transformedGlassSpecs = [];
-                foreach ($data['glass_specifications'] as $spec) {
-                    if (is_array($spec) && isset($spec['name'])) {
-                        $transformedGlassSpecs[] = $spec['name'];
-                    } else {
-                        $transformedGlassSpecs[] = $spec;
-                    }
+        // Transform complex objects to simple strings if needed
+        if (!isset($data['error']) && isset($data['glass_specifications']) && is_array($data['glass_specifications'])) {
+            $transformedGlassSpecs = [];
+            foreach ($data['glass_specifications'] as $spec) {
+                if (is_array($spec) && isset($spec['name'])) {
+                    $transformedGlassSpecs[] = $spec['name'];
+                } else {
+                    $transformedGlassSpecs[] = $spec;
                 }
-                $data['glass_specifications'] = $transformedGlassSpecs;
             }
-
-            if (isset($data['paint_finishes']) && is_array($data['paint_finishes'])) {
-                $transformedPaintFinishes = [];
-                foreach ($data['paint_finishes'] as $finish) {
-                    if (is_array($finish) && isset($finish['name'])) {
-                        $transformedPaintFinishes[] = $finish['name'];
-                    } else {
-                        $transformedPaintFinishes[] = $finish;
-                    }
-                }
-                $data['paint_finishes'] = $transformedPaintFinishes;
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get Finishes Error: ' . $e->getMessage());
-            return $this->getMockFinishes();
+            $data['glass_specifications'] = $transformedGlassSpecs;
         }
-    }
 
-    /**
-     * Get mock finishes data
-     */
-    private function getMockFinishes()
-    {
-        return [
-            'glass_specifications' => [
-                '24mm Double Glazed Unit',
-                '28mm Triple Glazed Unit',
-                'Acoustic Glass',
-                'Low-E Glass'
-            ],
-            'paint_finishes' => [
-                'White',
-                'Cream',
-                'Green',
-                'Black',
-                'Grey'
-            ],
-            'hardware_finishes' => [
-                [
-                    'name' => 'Polished Brass',
-                    'images' => [
-                        'sash' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Brass+Sash+Fastener',
-                            'https://via.placeholder.com/200x150.jpg?text=Brass+Sash+Lift'
-                        ],
-                        'casement' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Brass+Casement+Handle',
-                            'https://via.placeholder.com/200x150.jpg?text=Brass+Casement+Lock'
-                        ]
-                    ]
-                ],
-                [
-                    'name' => 'Chrome',
-                    'images' => [
-                        'sash' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Sash+Fastener',
-                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Sash+Lift'
-                        ],
-                        'casement' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Casement+Handle',
-                            'https://via.placeholder.com/200x150.jpg?text=Chrome+Casement+Lock'
-                        ]
-                    ]
-                ],
-                [
-                    'name' => 'Satin Chrome',
-                    'images' => [
-                        'sash' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Satin+Sash+Fastener',
-                            'https://via.placeholder.com/200x150.jpg?text=Satin+Sash+Lift'
-                        ],
-                        'casement' => [
-                            'https://via.placeholder.com/200x150.jpg?text=Satin+Casement+Handle',
-                            'https://via.placeholder.com/200x150.jpg?text=Satin+Casement+Lock'
-                        ]
-                    ]
-                ]
-            ]
-        ];
+        if (!isset($data['error']) && isset($data['paint_finishes']) && is_array($data['paint_finishes'])) {
+            $transformedPaintFinishes = [];
+            foreach ($data['paint_finishes'] as $finish) {
+                if (is_array($finish) && isset($finish['name'])) {
+                    $transformedPaintFinishes[] = $finish['name'];
+                } else {
+                    $transformedPaintFinishes[] = $finish;
+                }
+            }
+            $data['paint_finishes'] = $transformedPaintFinishes;
+        }
+
+        return $data;
     }
 
     /**
      * Update finishes
+     *
+     * @param array<string, mixed> $data The finishes data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updateFinishes(array $data, bool $partial = true)
+    public function updateFinishes(array $data, bool $partial = true): array
     {
-        try {
-            $response = $this->client->put('/api/v1/config/finishes', $data, [
+        return $this->processApiCall('/api/v1/config/finishes', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/finishes', [
+                'json' => $data,
                 'query' => ['partial' => $partial]
             ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update Finishes Error: ' . $e->getMessage());
-            return null;
-        }
+        }, false);
     }
 
     /**
      * Get PDF text configuration
+     *
+     * @return array<string, mixed> PDF text configuration data
      */
-    public function getPdfTextConfig()
+    public function getPdfTextConfig(): array
     {
-        try {
-            $response = $this->client->get('/api/v1/config/pdf_text_config');
-            $data = $response->json();
-
-            if (isset($data['error'])) {
-                return $this->getMockPdfTextConfig();
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            Log::error('Get PDF Text Config Error: ' . $e->getMessage());
-            return $this->getMockPdfTextConfig();
-        }
-    }
-
-    /**
-     * Get mock PDF text config data
-     */
-    private function getMockPdfTextConfig()
-    {
-        return [
-            'header' => 'Thank you for choosing Premium Windows',
-            'footer' => 'All our windows come with a 10-year guarantee',
-            'terms_and_conditions' => [
-                'This quotation is valid for 30 days from the date of issue.',
-                'A 50% deposit is required to confirm your order.',
-                'The balance is due on completion of installation.',
-                'All measurements are subject to survey.',
-                'Delivery times may vary depending on material availability.'
-            ],
-            'formats' => [
-                'date_format' => 'd/m/Y',
-                'currency_symbol' => '£',
-                'vat_rate' => 0.2
-            ]
-        ];
+        return $this->processApiCall('/api/v1/config/pdf_text_config', function () {
+            return $this->client->get('/api/v1/config/pdf_text_config');
+        });
     }
 
     /**
      * Get options
+     *
+     * @return array<string, mixed> Options data
      */
-    public function getOptions()
+    public function getOptions(): array
     {
-        // The API doesn't have a dedicated endpoint for options, so we always use mock data
-        Log::info('Using predefined options data for quotation system');
-        return $this->getMockOptions();
+        // Try to get options from the API if the endpoint exists
+        return $this->processApiCall('/api/v1/config/options', function () {
+            return $this->client->get('/api/v1/config/options');
+        });
     }
-
-    private function getMockOptions()
-    {
-        return [
-            'options' => [
-                [
-                    'id' => 1,
-                    'name' => 'Option 1',
-                    'description' => 'Standard option with basic features'
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Option 2',
-                    'description' => 'Premium option with enhanced features'
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Option 3',
-                    'description' => 'Deluxe option with all features included'
-                ],
-                [
-                    'id' => 4,
-                    'name' => 'Option 4',
-                    'description' => 'Custom option with specific features'
-                ]
-            ]
-        ];
-    }
-
-
-
 
 
     /**
      * Update options
+     *
+     * @param array<string, mixed> $data The options data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updateOptions(array $data, bool $partial = true)
+    public function updateOptions(array $data, bool $partial = true): array
     {
-        Log::info('Update options called, but no API endpoint exists for options');
-        return ['status' => 'not_supported'];
+        return $this->processApiCall('/api/v1/config/options', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/options', [
+                'json' => $data,
+                'query' => ['partial' => $partial]
+            ]);
+        }, false);
     }
 
     /**
      * Update PDF text configuration
+     *
+     * @param array<string, mixed> $data The PDF text configuration data to update
+     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @return array<string, mixed> The API response with success/error information
      */
-    public function updatePdfTextConfig(array $data, bool $partial = true)
+    public function updatePdfTextConfig(array $data, bool $partial = true): array
     {
-        try {
-            $response = $this->client->put('/api/v1/config/pdf_text_config', $data, [
+        return $this->processApiCall('/api/v1/config/pdf_text_config', function () use ($data, $partial) {
+            return $this->client->put('/api/v1/config/pdf_text_config', [
+                'json' => $data,
                 'query' => ['partial' => $partial]
             ]);
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Update PDF Text Config Error: ' . $e->getMessage());
-            return null;
-        }
+        }, false);
     }
 
     /**
      * Generate quotation
+     *
+     * @param array<string, mixed> $data The quotation data to send to the API
+     * @return array<string, mixed> The API response
      */
-    public function generateQuotation(array $data)
+    public function generateQuotation(array $data): array
     {
-        try {
-            // Log the data being sent to the API for debugging
-            Log::info('Sending quotation data to API', ['data' => json_encode($data)]);
+        // Log the data being sent to the API for debugging
+        Log::info('Sending quotation data to API', ['data' => json_encode($data)]);
 
-            // Ensure options field is properly formatted for each window
-            if (isset($data['windows']) && is_array($data['windows'])) {
-                foreach ($data['windows'] as &$window) {
-                    // Ensure options is set (default to 1 if not set)
-                    if (!isset($window['options'])) {
-                        $window['options'] = 1;
-                    }
+        // Ensure options field is properly formatted for each window
+        if (isset($data['windows']) && is_array($data['windows'])) {
+            foreach ($data['windows'] as &$window) {
+                // Ensure options is set (default to 1 if not set)
+                if (!isset($window['options'])) {
+                    $window['options'] = 1;
+                }
 
-                    // If options is an empty array, set it to 1
-                    if (is_array($window['options']) && empty($window['options'])) {
-                        $window['options'] = 1;
-                    }
+                // If options is an empty array, set it to 1
+                if (is_array($window['options']) && empty($window['options'])) {
+                    $window['options'] = 1;
                 }
             }
+        }
 
-            $response = $this->client->post('/api/v1/quotations', $data);
+        try {
+            $response = $this->processApiCall('/api/v1/quotations', function () use ($data) {
+                return $this->client->post('/api/v1/quotations', [
+                    'json' => $data
+                ]);
+            }, false);
 
-            if ($response->successful()) {
-                Log::info('Quotation generated successfully');
-                return [
-                    'success' => true,
-                    'data' => $response->body(),
-                    'headers' => $response->headers()
-                ];
-            }
+            // If we get here, the API call was successful
+            Log::info('Quotation generated successfully');
 
+            // Get the raw response from the client
+            $rawResponse = $this->client->post('/api/v1/quotations', [
+                'json' => $data
+            ]);
+
+            return [
+                'success' => true,
+                'data' => $rawResponse->body(),
+                'headers' => $rawResponse->headers()
+            ];
+        } catch (RequestException $e) {
             Log::error('API returned error for quotation generation', [
-                'status' => $response->status(),
-                'error' => $response->json()
+                'status' => $e->response->status(),
+                'error' => $e->response->json()
             ]);
 
             return [
                 'success' => false,
-                'error' => $response->json()
+                'error' => $e->response->json()
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Generate Quotation Error: ' . $e->getMessage());
             return [
                 'success' => false,

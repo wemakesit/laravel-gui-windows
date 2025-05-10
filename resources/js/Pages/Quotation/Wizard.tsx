@@ -9,9 +9,32 @@ import OptionsSelectionStep from './Steps/OptionsSelectionStep';
 import ReviewStep from './Steps/ReviewStep';
 import WizardProgress from './Components/WizardProgress';
 import WizardNavigation from './Components/WizardNavigation';
+import StepTransition from './Components/StepTransition';
+
+// Interface for the saved draft data
+interface QuotationDraft {
+    formData: {
+        customer_details: {
+            title: string;
+            first_name: string;
+            last_name: string;
+            email: string;
+            phone: string;
+            address: string;
+            additional_info: string;
+        };
+        windows: any[];
+        selected_caveats: Record<string, boolean>;
+    };
+    currentStep: number;
+    highestStepReached: number;
+    timestamp: number;
+}
 
 export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdfTextConfig, options, loadedQuotation }) {
     const [currentStep, setCurrentStep] = useState(1);
+    const [previousStep, setPreviousStep] = useState(1);
+    const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
     const [formData, setFormData] = useState({
         customer_details: {
             title: '',
@@ -32,6 +55,9 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const [isGenerating, setIsGenerating] = useState(false);
     const [notification, setNotification] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [hasDraft, setHasDraft] = useState(false);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
     // Track the highest step the user has reached
     const [highestStepReached, setHighestStepReached] = useState(1);
@@ -47,6 +73,59 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     });
 
     const totalSteps = 6;
+    const STORAGE_KEY = 'quotation_draft';
+
+    // Function to clear the saved draft
+    const clearDraft = () => {
+        localStorage.removeItem(STORAGE_KEY);
+        setHasDraft(false);
+        setLastSaved(null);
+    };
+
+    // Load draft from localStorage on component mount
+    useEffect(() => {
+        // Only try to load from localStorage if no quotation is loaded from the backend
+        if (!loadedQuotation && !isLoaded) {
+            try {
+                const savedDraft = localStorage.getItem(STORAGE_KEY);
+                if (savedDraft) {
+                    const parsedDraft: QuotationDraft = JSON.parse(savedDraft);
+
+                    // Set the form data and navigation state
+                    setFormData(parsedDraft.formData);
+                    setCurrentStep(parsedDraft.currentStep);
+                    setHighestStepReached(parsedDraft.highestStepReached);
+
+                    // Set all steps as valid when loading a draft
+                    const validationState: Record<number, boolean> = {};
+                    for (let i = 1; i <= totalSteps; i++) {
+                        validationState[i] = true;
+                    }
+                    setStepValidation(validationState as { 1: boolean; 2: boolean; 3: boolean; 4: boolean; 5: boolean; 6: boolean; });
+
+                    // Set the last saved timestamp
+                    setLastSaved(new Date(parsedDraft.timestamp));
+                    setHasDraft(true);
+                    setIsLoaded(true);
+
+                    // Show notification
+                    setNotification({
+                        type: 'info',
+                        message: 'Draft quotation loaded. You can continue where you left off.'
+                    });
+
+                    // Clear notification after 3 seconds
+                    setTimeout(() => {
+                        setNotification(null);
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Error loading draft from localStorage:', error);
+                // If there's an error, clear the draft to avoid future errors
+                clearDraft();
+            }
+        }
+    }, []);  // Empty dependency array ensures this runs only once on mount
 
     // Load quotation data if provided
     useEffect(() => {
@@ -57,6 +136,9 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
             if (loadedQuotation.customer_details) {
                 console.log('Wizard: Customer details from loaded quotation', loadedQuotation.customer_details);
             }
+
+            // Clear any existing draft when loading a quotation from the backend
+            clearDraft();
 
             setFormData(loadedQuotation);
             setIsLoaded(true);
@@ -83,6 +165,24 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
             }, 3000);
         }
     }, [loadedQuotation, isLoaded, totalSteps]);
+
+    // Save draft to localStorage when form data or navigation state changes
+    useEffect(() => {
+        // Only save if the form has been loaded (either from localStorage or from backend)
+        // and we're not currently generating a PDF
+        if (isLoaded && !isGenerating) {
+            const draftData: QuotationDraft = {
+                formData,
+                currentStep,
+                highestStepReached,
+                timestamp: Date.now()
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData));
+            setLastSaved(new Date());
+            setHasDraft(true);
+        }
+    }, [formData, currentStep, highestStepReached, isLoaded, isGenerating]);
 
     const updateFormData = (section, data) => {
         setFormData(prevData => ({
@@ -159,13 +259,27 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     const nextStep = () => {
         // Only proceed if current step is valid
         if (stepValidation[currentStep] && currentStep < totalSteps) {
-            const newStep = currentStep + 1;
-            setCurrentStep(newStep);
+            // Start transition
+            setIsTransitioning(true);
+            setTransitionDirection('forward');
+            setPreviousStep(currentStep);
 
-            // Update highest step reached if moving to a new step
-            if (newStep > highestStepReached) {
-                setHighestStepReached(newStep);
-            }
+            const newStep = currentStep + 1;
+
+            // Delay the actual step change to allow for animation
+            setTimeout(() => {
+                setCurrentStep(newStep);
+
+                // Update highest step reached if moving to a new step
+                if (newStep > highestStepReached) {
+                    setHighestStepReached(newStep);
+                }
+
+                // End transition after a short delay to ensure smooth animation
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                }, 50);
+            }, 150);
         } else if (!stepValidation[currentStep]) {
             // Show notification if step is not valid
             setNotification({
@@ -182,15 +296,41 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
 
     const prevStep = () => {
         if (currentStep > 1) {
-            setCurrentStep(currentStep - 1);
+            // Start transition
+            setIsTransitioning(true);
+            setTransitionDirection('backward');
+            setPreviousStep(currentStep);
+
+            // Delay the actual step change to allow for animation
+            setTimeout(() => {
+                setCurrentStep(currentStep - 1);
+
+                // End transition after a short delay to ensure smooth animation
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                }, 50);
+            }, 150);
         }
     };
 
     // Custom function to handle direct step navigation from progress bar
     const goToStep = (stepNumber) => {
         // Only allow navigation to steps that have been reached or previous steps
-        if (stepNumber <= highestStepReached) {
-            setCurrentStep(stepNumber);
+        if (stepNumber <= highestStepReached && stepNumber !== currentStep) {
+            // Start transition
+            setIsTransitioning(true);
+            setTransitionDirection(stepNumber > currentStep ? 'forward' : 'backward');
+            setPreviousStep(currentStep);
+
+            // Delay the actual step change to allow for animation
+            setTimeout(() => {
+                setCurrentStep(stepNumber);
+
+                // End transition after a short delay to ensure smooth animation
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                }, 50);
+            }, 150);
         }
     };
 
@@ -230,6 +370,9 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
             link.click();
             document.body.removeChild(link);
 
+            // Clear the draft after successful submission
+            clearDraft();
+
             setNotification({ type: 'success', message: 'Quotation downloaded successfully!' });
 
             // Clear notification after 3 seconds
@@ -250,78 +393,107 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
     };
 
     const renderStep = () => {
-        switch (currentStep) {
-            case 1:
-                return (
-                    <CustomerInfoStep
-                        customerInfo={formData.customer_details}
-                        updateCustomerInfo={(data) => updateFormData('customer_details', data)}
-                        validateStep={validateStep}
-                    />
-                );
-            case 2:
-                return (
-                    <WindowSelectionStep
-                        windows={formData.windows}
-                        windowTypes={windowTypes}
-                        addWindow={addWindow}
-                        updateWindow={updateWindow}
-                        removeWindow={removeWindow}
-                        openModal={openModal}
-                        setCurrentWindow={setCurrentWindow}
-                    />
-                );
-            case 3:
-                return (
-                    <WindowConfigStep
-                        windows={formData.windows}
-                        windowTypes={windowTypes}
-                        finishes={finishes}
-                        updateWindow={updateWindow}
-                        currentWindow={currentWindow}
-                        setCurrentWindow={setCurrentWindow}
-                        openModal={openModal}
-                    />
-                );
-            case 4:
-                return (
-                    <ExtrasSelectionStep
-                        windows={formData.windows}
-                        extras={extras}
-                        updateWindow={updateWindow}
-                        currentWindow={currentWindow}
-                        setCurrentWindow={setCurrentWindow}
-                        openModal={openModal}
-                    />
-                );
-            case 5:
-                return (
-                    <OptionsSelectionStep
-                        windows={formData.windows}
-                        options={options}
-                        updateWindow={updateWindow}
-                        currentWindow={currentWindow}
-                        setCurrentWindow={setCurrentWindow}
-                        openModal={openModal}
-                    />
-                );
-            case 6:
-                return (
-                    <ReviewStep
-                        formData={formData}
-                        windowTypes={windowTypes}
-                        extras={extras}
-                        finishes={finishes}
-                        companyInfo={companyInfo}
-                        pdfTextConfig={pdfTextConfig}
-                        options={options}
-                        updateFormData={updateFormData}
-                        submitQuotation={submitQuotation}
-                    />
-                );
-            default:
-                return null;
-        }
+        // Render both the current step and the previous step during transitions
+        // This allows for smooth animations between steps
+
+        const renderStepContent = (step) => {
+            switch (step) {
+                case 1:
+                    return (
+                        <CustomerInfoStep
+                            customerInfo={formData.customer_details}
+                            updateCustomerInfo={(data) => updateFormData('customer_details', data)}
+                            validateStep={validateStep}
+                        />
+                    );
+                case 2:
+                    return (
+                        <WindowSelectionStep
+                            windows={formData.windows}
+                            windowTypes={windowTypes}
+                            addWindow={addWindow}
+                            updateWindow={updateWindow}
+                            removeWindow={removeWindow}
+                            openModal={openModal}
+                            setCurrentWindow={setCurrentWindow}
+                        />
+                    );
+                case 3:
+                    return (
+                        <WindowConfigStep
+                            windows={formData.windows}
+                            windowTypes={windowTypes}
+                            finishes={finishes}
+                            updateWindow={updateWindow}
+                            currentWindow={currentWindow}
+                            setCurrentWindow={setCurrentWindow}
+                            openModal={openModal}
+                        />
+                    );
+                case 4:
+                    return (
+                        <ExtrasSelectionStep
+                            windows={formData.windows}
+                            extras={extras}
+                            updateWindow={updateWindow}
+                            currentWindow={currentWindow}
+                            setCurrentWindow={setCurrentWindow}
+                            openModal={openModal}
+                        />
+                    );
+                case 5:
+                    return (
+                        <OptionsSelectionStep
+                            windows={formData.windows}
+                            options={options}
+                            updateWindow={updateWindow}
+                            currentWindow={currentWindow}
+                            setCurrentWindow={setCurrentWindow}
+                            openModal={openModal}
+                        />
+                    );
+                case 6:
+                    return (
+                        <ReviewStep
+                            formData={formData}
+                            windowTypes={windowTypes}
+                            extras={extras}
+                            finishes={finishes}
+                            companyInfo={companyInfo}
+                            pdfTextConfig={pdfTextConfig}
+                            options={options}
+                            updateFormData={updateFormData}
+                            submitQuotation={submitQuotation}
+                        />
+                    );
+                default:
+                    return null;
+            }
+        };
+
+        return (
+            <div className="relative">
+                {/* Current step */}
+                <StepTransition
+                    show={!isTransitioning}
+                    direction={transitionDirection}
+                >
+                    {renderStepContent(currentStep)}
+                </StepTransition>
+
+                {/* Previous step (shown during transition) */}
+                {isTransitioning && (
+                    <div className="absolute top-0 left-0 w-full">
+                        <StepTransition
+                            show={isTransitioning}
+                            direction={transitionDirection === 'forward' ? 'backward' : 'forward'}
+                        >
+                            {renderStepContent(previousStep)}
+                        </StepTransition>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -360,7 +532,31 @@ export default function Wizard({ windowTypes, extras, finishes, companyInfo, pdf
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900">
                             <div className="flex justify-between items-center mb-6">
-                                <h1 className="text-2xl font-semibold">Window Quotation Wizard</h1>
+                                <div>
+                                    <h1 className="text-2xl font-semibold">Window Quotation Wizard</h1>
+                                    {hasDraft && lastSaved && (
+                                        <div className="flex items-center mt-2 text-sm text-gray-500">
+                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span>
+                                                Draft last saved: {lastSaved.toLocaleTimeString()} {lastSaved.toLocaleDateString()}
+                                            </span>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (confirm('Are you sure you want to clear this draft and start over?')) {
+                                                        clearDraft();
+                                                        window.location.reload();
+                                                    }
+                                                }}
+                                                className="ml-2 text-red-600 hover:text-red-800 underline"
+                                            >
+                                                Clear Draft
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 <Link
                                     href={route('quotations.index')}
                                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"

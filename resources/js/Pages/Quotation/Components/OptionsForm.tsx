@@ -76,7 +76,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
 
                 {options?.options?.length > 0 ? (
                     <div className="space-y-4">
-                        {options.options.map((option, index) => (
+                        {options?.options?.map((option, index) => (
                             <div key={index} className="flex items-center">
                                 <input
                                     id={`option-${option.id}`}
@@ -105,7 +105,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Options</h4>
                     <ul className="space-y-2">
                         {Object.keys(selectedOptions).map((optionId) => {
-                            const option = options.options.find(o => o.id === parseInt(optionId, 10));
+                            const option = options?.options?.find(o => o.id === parseInt(optionId, 10));
                             return (
                                 <li key={optionId} className="text-sm text-gray-600">
                                     {option ? option.name : `Option ${optionId}`}

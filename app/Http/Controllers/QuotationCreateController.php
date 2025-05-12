@@ -65,7 +65,16 @@ class QuotationCreateController extends Controller
             }
         }
 
-        $result = $this->apiService->generateQuotation($validated);
+        // Get company info to include in the quotation
+        $companyInfo = $this->apiService->getCompanyInfo();
+
+        // Add company info to the validated data
+        $quotationData = array_merge(['company_info' => $companyInfo], $validated);
+
+        // Log the complete data being sent to generate the quotation
+        \Log::info('Complete quotation data', ['data' => json_encode($quotationData)]);
+
+        $result = $this->apiService->generateQuotation($quotationData);
 
         if ($result['success']) {
             // Generate a unique filename with timestamp

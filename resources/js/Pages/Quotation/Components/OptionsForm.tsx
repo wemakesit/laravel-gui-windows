@@ -1,6 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function OptionsForm({ windowData, options, onSave, onCancel }) {
+    // Create default options if none are provided
+    const defaultOptions = [
+        { id: 1, name: 'Option 1'},
+        { id: 2, name: 'Option 2'},
+        { id: 3, name: 'Option 3'},
+        { id: 4, name: 'Option 4'},
+        { id: 5, name: 'Option 5'},
+    ];
+
+    // Use default options if none are provided
+    const [effectiveOptions, setEffectiveOptions] = useState({
+        options: options?.options?.length > 0 ? options.options : defaultOptions
+    });
+
+    // Update effective options when the props change
+    useEffect(() => {
+        if (options?.options?.length > 0) {
+            setEffectiveOptions({ options: options.options });
+        } else {
+            setEffectiveOptions({ options: defaultOptions });
+        }
+    }, [options]);
+
     // Ensure windowData has options field
     const initialWindowData = {
         ...windowData,
@@ -9,19 +32,22 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
 
     const [formData, setFormData] = useState(initialWindowData);
 
-    // Initialize selected options, ensuring at least one is selected
+    // Initialize selected options, ensuring Option 1 is always selected
     const [selectedOptions, setSelectedOptions] = useState(() => {
+        // Start with Option 1 always selected
+        const initialSelection = { 1: true };
+
+        // Add any other options that might be selected
         if (Array.isArray(initialWindowData.options) && initialWindowData.options.length > 0) {
-            return initialWindowData.options.reduce((acc, optionId) => {
-                acc[optionId] = true;
-                return acc;
-            }, {});
-        } else if (initialWindowData.options) {
-            return { [initialWindowData.options]: true };
-        } else {
-            // Default to option 1 if no options are selected
-            return { 1: true };
+            initialWindowData.options.forEach(optionId => {
+                initialSelection[optionId] = true;
+            });
+        } else if (initialWindowData.options && initialWindowData.options !== 1) {
+            // If it's a single option that's not 1, add it
+            initialSelection[initialWindowData.options] = true;
         }
+
+        return initialSelection;
     });
 
     const handleOptionToggle = (optionId) => {
@@ -74,30 +100,29 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                     Select which options this window should be included in. A window can be part of multiple options.
                 </p>
 
-                {options?.options?.length > 0 ? (
-                    <div className="space-y-4">
-                        {options?.options?.map((option, index) => (
-                            <div key={index} className="flex items-center">
-                                <input
-                                    id={`option-${option.id}`}
-                                    name={`option-${option.id}`}
-                                    type="checkbox"
-                                    checked={!!selectedOptions[option.id]}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOptionToggle(option.id)}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                                <label htmlFor={`option-${option.id}`} className="ml-3 flex flex-col">
-                                    <span className="text-sm font-medium text-gray-700">{option.name}</span>
-                                    {option.description && (
-                                        <span className="text-xs text-gray-500">{option.description}</span>
-                                    )}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-500">No options available.</p>
-                )}
+                <div className="space-y-4">
+                    {effectiveOptions.options.map((option, index) => (
+                        <div key={index} className="flex items-center">
+                            <input
+                                id={`option-${option.id}`}
+                                name={`option-${option.id}`}
+                                type="checkbox"
+                                checked={!!selectedOptions[option.id]}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOptionToggle(option.id)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor={`option-${option.id}`} className="ml-3 flex flex-col">
+                                <span className="text-sm font-medium text-gray-700">
+                                    {option.name}
+                                    {option.id === 1 && <span className="ml-2 text-xs text-blue-600">(Default)</span>}
+                                </span>
+                                {option.description && (
+                                    <span className="text-xs text-gray-500">{option.description}</span>
+                                )}
+                            </label>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {Object.keys(selectedOptions).length > 0 && (
@@ -105,7 +130,7 @@ export default function OptionsForm({ windowData, options, onSave, onCancel }) {
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Options</h4>
                     <ul className="space-y-2">
                         {Object.keys(selectedOptions).map((optionId) => {
-                            const option = options?.options?.find(o => o.id === parseInt(optionId, 10));
+                            const option = effectiveOptions.options.find(o => o.id === parseInt(optionId, 10));
                             return (
                                 <li key={optionId} className="text-sm text-gray-600">
                                     {option ? option.name : `Option ${optionId}`}

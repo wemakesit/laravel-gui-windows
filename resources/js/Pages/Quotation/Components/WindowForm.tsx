@@ -58,12 +58,51 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         'Master Bedroom', 'Office', 'Hallway', 'Conservatory', 'Utility Room'
     ]);
 
+    // Get the window types array from either format, ensuring it always returns an array
+    const getWindowTypesArray = () => {
+        // Handle case where windowTypes is undefined or null
+        if (!windowTypes) {
+            console.warn('WindowForm: windowTypes prop is undefined or null');
+            return [];
+        }
+
+        // Handle case where windowTypes is an array
+        if (Array.isArray(windowTypes)) {
+            return windowTypes;
+        }
+
+        // Handle case where windowTypes is an object with window_types property
+        if (windowTypes.window_types && Array.isArray(windowTypes.window_types)) {
+            return windowTypes.window_types;
+        }
+
+        // Handle case where windowTypes is an object but window_types is not an array
+        if (windowTypes.window_types && !Array.isArray(windowTypes.window_types)) {
+            console.warn('WindowForm: windowTypes.window_types is not an array', windowTypes.window_types);
+            return [];
+        }
+
+        // Handle case where windowTypes is an object without window_types property
+        if (typeof windowTypes === 'object' && !('window_types' in windowTypes)) {
+            console.warn('WindowForm: windowTypes object does not have window_types property', windowTypes);
+
+            // Try to extract any array that might be in the object
+            const possibleArrays = Object.values(windowTypes).filter(value => Array.isArray(value));
+            if (possibleArrays.length > 0) {
+                // Use the first array found
+                return possibleArrays[0];
+            }
+        }
+
+        // Last resort fallback
+        console.warn('WindowForm: Could not extract window types from provided data', windowTypes);
+        return [];
+    };
+
     useEffect(() => {
         if (formData.type) {
-            // Handle both formats of windowTypes
-            const typesToSearch = Array.isArray(windowTypes)
-                ? windowTypes
-                : (windowTypes?.window_types || []);
+            // Use the safe getWindowTypesArray function
+            const typesToSearch = getWindowTypesArray();
 
             const type = typesToSearch.find(t => t.Type === formData.type);
             if (type) {
@@ -104,10 +143,8 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
     // Handle window type selection from combobox
     const handleWindowTypeChange = (selectedValue: string) => {
         if (selectedValue) {
-            // Handle both formats of windowTypes
-            const typesToSearch = Array.isArray(windowTypes)
-                ? windowTypes
-                : (windowTypes?.window_types || []);
+            // Use the safe getWindowTypesArray function
+            const typesToSearch = getWindowTypesArray();
 
             const type = typesToSearch.find(t => t.Type === selectedValue);
             if (type) {
@@ -139,19 +176,19 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
         onSave(formData);
     };
 
-    // Get the window types array from either format
-    const getWindowTypesArray = () => {
-        return Array.isArray(windowTypes)
-            ? windowTypes
-            : (windowTypes?.window_types || []);
-    };
+    // Get window types array safely
+    const windowTypesArray = getWindowTypesArray();
 
-    // Filter window types based on search query
+    // Filter window types based on search query, with additional safety checks
     const filteredWindowTypes = windowTypeQuery === ''
-        ? getWindowTypesArray()
-        : getWindowTypesArray().filter((type) =>
-            type.Type.toLowerCase().includes(windowTypeQuery.toLowerCase())
-        );
+        ? windowTypesArray
+        : windowTypesArray.filter((type) => {
+            // Ensure type is a valid object with a Type property
+            if (type && typeof type === 'object' && type.Type) {
+                return type.Type.toLowerCase().includes(windowTypeQuery.toLowerCase());
+            }
+            return false;
+        });
 
     // Filter room suggestions based on search query
     const filteredRooms = roomQuery === ''
@@ -263,12 +300,16 @@ export default function WindowForm({ windowData, windowTypes, onSave, onCancel }
                                 afterLeave={() => setWindowTypeQuery('')}
                             >
                                 <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                                    {filteredWindowTypes.length === 0 && windowTypeQuery !== '' ? (
+                                    {!Array.isArray(filteredWindowTypes) ? (
+                                        <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                                            Error loading window types.
+                                        </div>
+                                    ) : filteredWindowTypes.length === 0 && windowTypeQuery !== '' ? (
                                         <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
                                             No window types found.
                                         </div>
                                     ) : (
-                                        filteredWindowTypes.map((type, index) => (
+                                        Array.isArray(filteredWindowTypes) && filteredWindowTypes.map((type, index) => (
                                             <Combobox.Option
                                                 key={index}
                                                 className={({ active }) =>

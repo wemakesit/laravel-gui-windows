@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// React is used implicitly for JSX
+import React from 'react';
 import WindowForm from '../Components/WindowForm';
 
 interface Window {
@@ -24,7 +25,7 @@ interface WindowType {
 
 interface WindowSelectionStepProps {
     windows: Window[];
-    windowTypes: WindowType[];
+    windowTypes: WindowType[] | { window_types: WindowType[] } | any;
     addWindow: (window: Window) => void;
     updateWindow: (index: number, window: Window) => void;
     removeWindow: (index: number) => void;
@@ -44,9 +45,24 @@ export default function WindowSelectionStep({
     const handleAddWindow = () => {
         setCurrentWindow(null);
 
+        // Ensure windowTypes is properly formatted
+        let formattedWindowTypes: { window_types: WindowType[] };
+
+        if (!windowTypes) {
+            console.warn('WindowSelectionStep: windowTypes is undefined or null');
+            formattedWindowTypes = { window_types: [] };
+        } else if (Array.isArray(windowTypes)) {
+            formattedWindowTypes = { window_types: windowTypes };
+        } else if (typeof windowTypes === 'object' && 'window_types' in windowTypes && Array.isArray(windowTypes.window_types)) {
+            formattedWindowTypes = windowTypes as { window_types: WindowType[] };
+        } else {
+            console.warn('WindowSelectionStep: windowTypes has unexpected format', windowTypes);
+            formattedWindowTypes = { window_types: [] };
+        }
+
         const content = (
             <WindowForm
-                windowTypes={{ window_types: windowTypes }}
+                windowTypes={formattedWindowTypes}
                 onSave={(windowData) => {
                     addWindow(windowData);
                     closeModal();
@@ -64,10 +80,25 @@ export default function WindowSelectionStep({
     const handleEditWindow = (index: number) => {
         setCurrentWindow(index);
 
+        // Ensure windowTypes is properly formatted
+        let formattedWindowTypes: { window_types: WindowType[] };
+
+        if (!windowTypes) {
+            console.warn('WindowSelectionStep: windowTypes is undefined or null');
+            formattedWindowTypes = { window_types: [] };
+        } else if (Array.isArray(windowTypes)) {
+            formattedWindowTypes = { window_types: windowTypes };
+        } else if (typeof windowTypes === 'object' && 'window_types' in windowTypes && Array.isArray(windowTypes.window_types)) {
+            formattedWindowTypes = windowTypes as { window_types: WindowType[] };
+        } else {
+            console.warn('WindowSelectionStep: windowTypes has unexpected format', windowTypes);
+            formattedWindowTypes = { window_types: [] };
+        }
+
         const content = (
             <WindowForm
                 windowData={windows[index]}
-                windowTypes={{ window_types: windowTypes }}
+                windowTypes={formattedWindowTypes}
                 onSave={(windowData) => {
                     updateWindow(index, windowData);
                     closeModal();
@@ -111,14 +142,14 @@ export default function WindowSelectionStep({
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button
                                             type="button"
-                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => handleEditWindow(index)}
+                                            onClick={() => handleEditWindow(index)}
                                             className="text-blue-600 hover:text-blue-900 mr-3"
                                         >
                                             Edit
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => removeWindow(index)}
+                                            onClick={() => removeWindow(index)}
                                             className="text-red-600 hover:text-red-900"
                                         >
                                             Remove

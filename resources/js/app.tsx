@@ -6,6 +6,9 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
+// Initialize PWA Service
+import { pwaService } from './Services/PWAService';
+
 // Add type augmentation for import.meta
 interface ImportMetaEnv {
   VITE_APP_NAME?: string;
@@ -17,6 +20,9 @@ interface ImportMeta {
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+// Log PWA initialization
+console.log('App: PWA Service initialized', pwaService);
 
 createInertiaApp({
   title: (title: string) => `${title} - ${appName}`,

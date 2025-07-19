@@ -8,6 +8,9 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { CompanyInfo, WindowType, Extra, Finish, PdfTextConfig } from '@/types';
+import PWADebug from '../../Components/PWADebug';
+import InstallPrompt from '../../Components/InstallPrompt';
+import OfflineStatus from '../../Components/OfflineStatus';
 
 interface ApiDocs {
   apiBaseUrl?: string;
@@ -195,10 +198,10 @@ export default function Index({
               <div className='flex justify-between items-center mb-6'>
                 <h1 className='text-2xl font-semibold'>Settings</h1>
                 <Link
-                  href={route('estimates.index')}
+                  href={route('dashboard')}
                   className='px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700'
                 >
-                  Back to Estimates
+                  Back to Dashboard
                 </Link>
               </div>
 
@@ -275,6 +278,18 @@ export default function Index({
                     }
                   >
                     PDF Text
+                  </Tab>
+                  <Tab
+                    className={({ selected }) =>
+                      `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+                                            ${
+                                              selected
+                                                ? 'bg-white text-blue-700 shadow'
+                                                : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                                            }`
+                    }
+                  >
+                    PWA & Offline
                   </Tab>
                 </Tab.List>
                 <Tab.Panels>
@@ -640,6 +655,97 @@ export default function Index({
                       <p className='text-gray-500'>
                         PDF text configuration will be implemented here.
                       </p>
+                    </div>
+                  </Tab.Panel>
+
+                  {/* PWA & Offline Panel */}
+                  <Tab.Panel>
+                    <div className='rounded-xl bg-white p-3'>
+                      <h2 className='text-xl font-semibold mb-4'>
+                        PWA & Offline Settings
+                      </h2>
+
+                      {/* Offline Status */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Connection Status</h3>
+                        <OfflineStatus showWhenOnline={true} />
+                      </div>
+
+                      {/* App Installation */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>App Installation</h3>
+                        <div className='bg-gray-50 rounded-lg p-4'>
+                          <p className='text-sm text-gray-600 mb-4'>
+                            Install this application for better performance, offline access, and a native app experience on your Surface Pro tablet.
+                          </p>
+                          <div className='flex flex-wrap gap-3'>
+                            <InstallPrompt variant='button' />
+                            <button
+                              onClick={() => {
+                                if ('serviceWorker' in navigator) {
+                                  navigator.serviceWorker.register('/sw.js').then(reg => {
+                                    console.log('Manual SW registration:', reg);
+                                    alert('Service Worker registered successfully!');
+                                  }).catch(err => {
+                                    console.error('Manual SW registration failed:', err);
+                                    alert('Service Worker registration failed: ' + err.message);
+                                  });
+                                } else {
+                                  alert('Service Workers not supported in this browser');
+                                }
+                              }}
+                              className='inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                            >
+                              Test Service Worker
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Manual Install Instructions */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Manual Installation</h3>
+                        <div className='bg-blue-50 rounded-lg p-4'>
+                          <p className='text-sm text-blue-800 mb-3'>
+                            If the automatic install doesn't work, you can manually install the app:
+                          </p>
+                          <ul className='text-sm text-blue-700 space-y-2'>
+                            <li><strong>Chrome/Edge:</strong> Click the menu (⋮) → "Install Window Estimate System"</li>
+                            <li><strong>Safari:</strong> Click Share → "Add to Home Screen"</li>
+                            <li><strong>Firefox:</strong> Click the address bar install icon</li>
+                            <li><strong>Surface Pro:</strong> Use Edge for best tablet experience</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* PWA Debug Information */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Technical Information</h3>
+                        <PWADebug />
+                      </div>
+
+                      {/* Offline Features */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Offline Features</h3>
+                        <div className='bg-green-50 rounded-lg p-4'>
+                          <h4 className='font-medium text-green-800 mb-2'>What works offline:</h4>
+                          <ul className='text-sm text-green-700 space-y-1 mb-4'>
+                            <li>• Create and edit window estimates</li>
+                            <li>• Access customer information forms</li>
+                            <li>• Configure windows and options</li>
+                            <li>• Save estimates locally</li>
+                            <li>• View previously created estimates</li>
+                          </ul>
+
+                          <h4 className='font-medium text-green-800 mb-2'>What requires internet:</h4>
+                          <ul className='text-sm text-green-700 space-y-1'>
+                            <li>• PDF generation and download</li>
+                            <li>• Syncing estimates to server</li>
+                            <li>• Loading configuration updates</li>
+                            <li>• Address lookup functionality</li>
+                          </ul>
+                        </div>
+                      </div>
                     </div>
                   </Tab.Panel>
                 </Tab.Panels>

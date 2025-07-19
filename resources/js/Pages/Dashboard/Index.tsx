@@ -1,5 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
+import OfflineStatus from '../../Components/OfflineStatus';
+import InstallPrompt from '../../Components/InstallPrompt';
 
 interface EstimateListItem {
   id: number;
@@ -28,6 +30,10 @@ export default function Index({ recentEstimates, statistics }: DashboardProps) {
 
       <div className='min-h-screen bg-gray-50 py-12'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+          {/* PWA Status and Install Prompt */}
+          <OfflineStatus className='mb-6' />
+          <InstallPrompt className='mb-6' variant='banner' />
+
           {/* Header */}
           <div className='text-center mb-12'>
             <h1 className='text-4xl font-bold text-gray-900 mb-4'>

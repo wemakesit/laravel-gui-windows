@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
+import { usePWA } from '../../Hooks/usePWA';
+import OfflineStatus from '../../Components/OfflineStatus';
 import CustomerInfoStep from './Steps/CustomerInfoStep';
 import WindowSelectionStep from './Steps/WindowSelectionStep';
 import WindowConfigStep from './Steps/WindowConfigStep';
@@ -40,6 +42,7 @@ export default function Wizard({
   options,
   loadedEstimate,
 }) {
+  const { canGenerateEstimate, cacheEstimate, isOnline } = usePWA();
   const [currentStep, setCurrentStep] = useState(1);
   const [previousStep, setPreviousStep] = useState(1);
   const [transitionDirection, setTransitionDirection] = useState<
@@ -368,6 +371,35 @@ export default function Wizard({
   };
 
   const submitEstimate = () => {
+    // Check if we can generate PDF (online only)
+    if (!canGenerateEstimate) {
+      // Cache estimate for offline use
+      const estimateData = {
+        id: `offline-${Date.now()}`,
+        customerInfo: formData.customer_details,
+        windows: formData.windows,
+        selectedCaveats: formData.selected_caveats,
+        timestamp: Date.now(),
+        synced: false
+      };
+
+      cacheEstimate(estimateData);
+
+      setNotification({
+        type: 'info',
+        message: 'Estimate saved offline. PDF will be generated when you\'re back online.',
+      });
+
+      // Clear the draft after saving offline
+      clearDraft();
+
+      setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+
+      return;
+    }
+
     setIsGenerating(true);
     setNotification({
       type: 'info',
@@ -603,6 +635,9 @@ export default function Wizard({
 
       <div className='py-12'>
         <div className='max-w-7xl mx-auto sm:px-6 lg:px-8'>
+          {/* Offline Status */}
+          <OfflineStatus className='mb-6' />
+
           <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
             <div className='p-6 text-gray-900'>
               <div className='flex justify-between items-center mb-6'>

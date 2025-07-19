@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePWA } from '../../../Hooks/usePWA';
 
 interface WizardNavigationProps {
   currentStep: number;
@@ -17,6 +18,7 @@ export default function WizardNavigation({
   submitEstimate,
   isValid,
 }: WizardNavigationProps) {
+  const { canGenerateEstimate } = usePWA();
   return (
     <div className='mt-8 flex justify-between'>
       <button
@@ -40,7 +42,7 @@ export default function WizardNavigation({
             }`}
             disabled={!isValid}
           >
-            Generate Estimate
+            {canGenerateEstimate ? 'Generate Estimate' : 'Save Offline'}
           </button>
         ) : (
           <button

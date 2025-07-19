@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use Exception;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Config;
-use Exception;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * API Service for interacting with the external API
@@ -16,43 +16,31 @@ use Exception;
  * This service provides methods for communicating with the external API,
  * handling authentication, retries, error handling, and response formatting.
  * It uses Laravel's HTTP client for all API interactions.
- *
- * @package App\Services
  */
 class ApiService
 {
     /**
      * The base URL for the API
-     *
-     * @var string
      */
     protected string $baseUrl;
 
     /**
      * The HTTP client instance
-     *
-     * @var PendingRequest
      */
     protected PendingRequest $client;
 
     /**
      * Maximum number of retry attempts for API calls
-     *
-     * @var int
      */
     protected int $maxRetries;
 
     /**
      * Retry delay in milliseconds
-     *
-     * @var int
      */
     protected int $retryDelay;
 
     /**
      * API token for authentication
-     *
-     * @var string|null
      */
     protected ?string $apiToken;
 
@@ -92,9 +80,10 @@ class ApiService
     /**
      * Execute a callable with retry logic and exponential backoff
      *
-     * @param string $endpoint The API endpoint being called (for logging)
-     * @param callable $apiCall The API call function to execute
+     * @param  string  $endpoint  The API endpoint being called (for logging)
+     * @param  callable  $apiCall  The API call function to execute
      * @return mixed The response from the API call
+     *
      * @throws RequestException When the API request fails after all retries
      * @throws ConnectionException When a connection error occurs after all retries
      * @throws Exception When an unexpected error occurs
@@ -122,7 +111,7 @@ class ApiService
                 $attempt++;
             } catch (RequestException $e) {
                 // Only retry on server errors (5xx)
-                if (!$e->response || $e->response->status() < 500 || $attempt === $maxAttempts) {
+                if (! $e->response || $e->response->status() < 500 || $attempt === $maxAttempts) {
                     throw $e; // Don't retry client errors or if we've exhausted retries
                 }
 
@@ -136,7 +125,7 @@ class ApiService
         }
 
         // If we got here without a response, something went wrong
-        if (!$response) {
+        if (! $response) {
             throw new Exception("Failed to get response after {$maxAttempts} attempts");
         }
 
@@ -146,10 +135,11 @@ class ApiService
     /**
      * Process API response with standardized error handling
      *
-     * @param string $endpoint The API endpoint that was called
-     * @param callable $apiCall The API call function to execute with retry logic
-     * @param bool $allowFailure Whether to return an error response instead of throwing an exception
+     * @param  string  $endpoint  The API endpoint that was called
+     * @param  callable  $apiCall  The API call function to execute with retry logic
+     * @param  bool  $allowFailure  Whether to return an error response instead of throwing an exception
      * @return array<string, mixed> The processed API response
+     *
      * @throws RequestException When the API request fails and $allowFailure is false
      * @throws ConnectionException When a connection error occurs and $allowFailure is false
      * @throws Exception When an unexpected error occurs and $allowFailure is false
@@ -164,6 +154,7 @@ class ApiService
             if ($response->successful()) {
                 $data = $response->json() ?? [];
                 Log::debug("API call to {$endpoint} successful", ['status' => $response->status()]);
+
                 return $data;
             }
 
@@ -171,7 +162,7 @@ class ApiService
             Log::error("API call to {$endpoint} failed", [
                 'status' => $response->status(),
                 'body' => $response->body(),
-                'headers' => $response->headers()
+                'headers' => $response->headers(),
             ]);
 
             // If we allow failure, return an error response
@@ -205,7 +196,7 @@ class ApiService
             Log::error("API request exception for {$endpoint}", [
                 'message' => $e->getMessage(),
                 'status' => $statusCode,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             if ($allowFailure) {
@@ -220,7 +211,7 @@ class ApiService
         } catch (ConnectionException $e) {
             Log::error("API connection exception for {$endpoint}", [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             if ($allowFailure) {
@@ -234,7 +225,7 @@ class ApiService
         } catch (Exception $e) {
             Log::error("Unexpected exception for {$endpoint}", [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             if ($allowFailure) {
@@ -251,9 +242,9 @@ class ApiService
     /**
      * Create a standardized error response array
      *
-     * @param string $message The error message
-     * @param int $status The HTTP status code
-     * @param array<string, mixed> $data Additional data to include in the response
+     * @param  string  $message  The error message
+     * @param  int  $status  The HTTP status code
+     * @param  array<string, mixed>  $data  Additional data to include in the response
      * @return array<string, mixed> The formatted error response
      */
     protected function createErrorResponse(string $message, int $status, array $data = []): array
@@ -261,10 +252,10 @@ class ApiService
         $response = [
             'error' => true,
             'message' => $message,
-            'status' => $status
+            'status' => $status,
         ];
 
-        if (!empty($data)) {
+        if (! empty($data)) {
             $response['data'] = $data;
         }
 
@@ -274,7 +265,7 @@ class ApiService
     /**
      * Perform a standardized GET request to the API
      *
-     * @param string $endpoint The API endpoint to call
+     * @param  string  $endpoint  The API endpoint to call
      * @return array<string, mixed> The API response data
      */
     protected function performGetRequest(string $endpoint): array
@@ -307,9 +298,9 @@ class ApiService
     /**
      * Perform a standardized update request to the API
      *
-     * @param string $endpoint The API endpoint to call
-     * @param array<string, mixed> $data The data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  string  $endpoint  The API endpoint to call
+     * @param  array<string, mixed>  $data  The data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     protected function performUpdateRequest(string $endpoint, array $data, bool $partial = true): array
@@ -317,7 +308,7 @@ class ApiService
         return $this->processApiCall($endpoint, function () use ($endpoint, $data, $partial) {
             return $this->client->put($endpoint, [
                 'json' => $data,
-                'query' => ['partial' => $partial]
+                'query' => ['partial' => $partial],
             ]);
         }, false);
     }
@@ -325,8 +316,8 @@ class ApiService
     /**
      * Update company information
      *
-     * @param array<string, mixed> $data The company information data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The company information data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updateCompanyInfo(array $data, bool $partial = true): array
@@ -345,6 +336,7 @@ class ApiService
         if (\Illuminate\Support\Facades\Cache::has('window_types')) {
             $cachedData = \Illuminate\Support\Facades\Cache::get('window_types');
             Log::debug('Retrieved window types from cache');
+
             return $cachedData;
         }
 
@@ -353,7 +345,7 @@ class ApiService
             $data = $this->performGetRequest('/api/v1/config/window_types');
 
             // Check if the data has the expected structure
-            if (!isset($data['window_types']) || !is_array($data['window_types']) || empty($data['window_types'])) {
+            if (! isset($data['window_types']) || ! is_array($data['window_types']) || empty($data['window_types'])) {
                 Log::warning('API returned invalid window types data structure', ['data' => $data]);
                 $data = $this->getDefaultWindowTypes();
             }
@@ -366,7 +358,7 @@ class ApiService
         } catch (\Exception $e) {
             Log::error('Failed to fetch window types from API', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Return default window types if API call fails
@@ -387,35 +379,35 @@ class ApiService
                     'Type' => 'Softwood Sash Window S',
                     'Description' => 'Standard softwood sash window - small size',
                     'Cost' => 1350.0,
-                    'BasePrice' => 1350.0
+                    'BasePrice' => 1350.0,
                 ],
                 [
                     'Type' => 'Softwood Sash Window M',
                     'Description' => 'Standard softwood sash window - medium size',
                     'Cost' => 1500.0,
-                    'BasePrice' => 1500.0
+                    'BasePrice' => 1500.0,
                 ],
                 [
                     'Type' => 'Softwood Sash Window L',
                     'Description' => 'Standard softwood sash window - large size',
                     'Cost' => 1700.0,
-                    'BasePrice' => 1700.0
+                    'BasePrice' => 1700.0,
                 ],
                 [
                     'Type' => 'Softwood Casement Window',
                     'Description' => 'Standard softwood casement window',
                     'Cost' => 1200.0,
-                    'BasePrice' => 1200.0
-                ]
-            ]
+                    'BasePrice' => 1200.0,
+                ],
+            ],
         ];
     }
 
     /**
      * Update window types
      *
-     * @param array<string, mixed> $data The window types data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The window types data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updateWindowTypes(array $data, bool $partial = true): array
@@ -442,8 +434,8 @@ class ApiService
     /**
      * Update extras
      *
-     * @param array<string, mixed> $data The extras data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The extras data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updateExtras(array $data, bool $partial = true): array
@@ -454,13 +446,13 @@ class ApiService
     /**
      * Transform complex objects to simple strings
      *
-     * @param array<string, mixed> $data The data containing complex objects
-     * @param string $key The key of the array to transform
+     * @param  array<string, mixed>  $data  The data containing complex objects
+     * @param  string  $key  The key of the array to transform
      * @return array<string, mixed> The data with transformed values
      */
     protected function transformComplexObjectsToStrings(array $data, string $key): array
     {
-        if (!isset($data['error']) && isset($data[$key]) && is_array($data[$key])) {
+        if (! isset($data['error']) && isset($data[$key]) && is_array($data[$key])) {
             $transformed = [];
             foreach ($data[$key] as $item) {
                 if (is_array($item) && isset($item['name'])) {
@@ -494,8 +486,8 @@ class ApiService
     /**
      * Update finishes
      *
-     * @param array<string, mixed> $data The finishes data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The finishes data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updateFinishes(array $data, bool $partial = true): array
@@ -534,14 +526,15 @@ class ApiService
             // If we get a 404, return default options
             if ($response->status() === 404) {
                 Log::info('Options endpoint not found, returning default options');
+
                 return [
                     'options' => [
                         ['id' => 1, 'name' => 'Option 1'],
                         ['id' => 2, 'name' => 'Option 2'],
                         ['id' => 3, 'name' => 'Option 3'],
                         ['id' => 4, 'name' => 'Option 4'],
-                        ['id' => 5, 'name' => 'Option 5']
-                    ]
+                        ['id' => 5, 'name' => 'Option 5'],
+                    ],
                 ];
             }
 
@@ -555,19 +548,21 @@ class ApiService
             // If the endpoint doesn't exist (404), return a default structure
             if ($e->response && $e->response->status() === 404) {
                 Log::info('Options endpoint not found, returning default options');
+
                 return [
                     'options' => [
                         ['id' => 1, 'name' => 'Option 1'],
                         ['id' => 2, 'name' => 'Option 2'],
                         ['id' => 3, 'name' => 'Option 3'],
                         ['id' => 4, 'name' => 'Option 4'],
-                        ['id' => 5, 'name' => 'Option 5']
-                    ]
+                        ['id' => 5, 'name' => 'Option 5'],
+                    ],
                 ];
             }
 
             // For other errors, return an error response
             $statusCode = $e->response ? $e->response->status() : 500;
+
             return $this->createErrorResponse(
                 $e->getMessage(),
                 $statusCode,
@@ -585,8 +580,8 @@ class ApiService
     /**
      * Update options
      *
-     * @param array<string, mixed> $data The options data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The options data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updateOptions(array $data, bool $partial = true): array
@@ -597,8 +592,8 @@ class ApiService
     /**
      * Update PDF text configuration
      *
-     * @param array<string, mixed> $data The PDF text configuration data to update
-     * @param bool $partial Whether to perform a partial update (true) or full replacement (false)
+     * @param  array<string, mixed>  $data  The PDF text configuration data to update
+     * @param  bool  $partial  Whether to perform a partial update (true) or full replacement (false)
      * @return array<string, mixed> The API response with success/error information
      */
     public function updatePdfTextConfig(array $data, bool $partial = true): array
@@ -609,7 +604,7 @@ class ApiService
     /**
      * Format window options to ensure they are properly structured
      *
-     * @param array<string, mixed> $data The quotation data containing windows
+     * @param  array<string, mixed>  $data  The quotation data containing windows
      * @return array<string, mixed> The data with properly formatted window options
      */
     protected function formatWindowOptions(array $data): array
@@ -617,13 +612,13 @@ class ApiService
         if (isset($data['windows']) && is_array($data['windows'])) {
             foreach ($data['windows'] as &$window) {
                 // Ensure options is set (default to [1] if not set)
-                if (!isset($window['options'])) {
+                if (! isset($window['options'])) {
                     $window['options'] = [1];
                 }
 
                 // If options is a single integer, convert it to an array
                 if (is_numeric($window['options'])) {
-                    $window['options'] = [(int)$window['options']];
+                    $window['options'] = [(int) $window['options']];
                 }
 
                 // If options is an empty array, set it to [1]
@@ -649,7 +644,7 @@ class ApiService
     /**
      * Generate quotation PDF from the API
      *
-     * @param array<string, mixed> $data The quotation data to send to the API
+     * @param  array<string, mixed>  $data  The quotation data to send to the API
      * @return array<string, mixed> The API response with PDF data or error information
      */
     public function generateQuotation(array $data): array
@@ -666,7 +661,7 @@ class ApiService
         $requestData = [
             'customer_details' => $data['customer_details'] ?? null,
             'windows' => $data['windows'] ?? [],
-            'selected_caveats' => $data['selected_caveats'] ?? null
+            'selected_caveats' => $data['selected_caveats'] ?? null,
         ];
 
         // Add company_info if it exists
@@ -699,20 +694,20 @@ class ApiService
                 return [
                     'success' => true,
                     'data' => $pdfContent,
-                    'headers' => ['Content-Type' => $contentType]
+                    'headers' => ['Content-Type' => $contentType],
                 ];
             }
 
             // If we get here, the API returned an error status code
             Log::error('API returned error for quotation generation', [
                 'status' => $response->status(),
-                'body' => $response->body()
+                'body' => $response->body(),
             ]);
 
             return [
                 'success' => false,
-                'error' => 'API returned error: ' . $response->status(),
-                'status' => $response->status()
+                'error' => 'API returned error: '.$response->status(),
+                'status' => $response->status(),
             ];
         } catch (RequestException $e) {
             $statusCode = 500;
@@ -744,36 +739,36 @@ class ApiService
                 'message' => $errorMessage,
                 'status' => $statusCode,
                 'trace' => $e->getTraceAsString(),
-                'response_data' => $responseData
+                'response_data' => $responseData,
             ]);
 
             return [
                 'success' => false,
                 'error' => $errorMessage,
                 'status' => $statusCode,
-                'data' => $responseData
+                'data' => $responseData,
             ];
         } catch (ConnectionException $e) {
             Log::error('API connection exception for quotation generation', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'error' => 'Connection error: ' . $e->getMessage(),
-                'status' => 503 // Service Unavailable
+                'error' => 'Connection error: '.$e->getMessage(),
+                'status' => 503, // Service Unavailable
             ];
         } catch (Exception $e) {
             Log::error('Unexpected exception for quotation generation', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
-                'status' => 500 // Internal Server Error
+                'status' => 500, // Internal Server Error
             ];
         }
     }

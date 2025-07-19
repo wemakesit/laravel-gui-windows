@@ -24,7 +24,6 @@ class AddressController extends Controller
     /**
      * Search for addresses by postcode using the Postcodes.io API.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function searchByPostcode(Request $request)
@@ -67,8 +66,12 @@ class AddressController extends Controller
 
                     // Add nearby postcodes as additional options
                     foreach ($nearbyResults as $index => $nearby) {
-                        if ($index === 0) continue; // Skip the first one as it's the same as the main result
-                        if ($index > 5) break; // Limit to 5 nearby addresses
+                        if ($index === 0) {
+                            continue;
+                        } // Skip the first one as it's the same as the main result
+                        if ($index > 5) {
+                            break;
+                        } // Limit to 5 nearby addresses
 
                         $addresses[] = [
                             'id' => $index + 1,
@@ -83,12 +86,14 @@ class AddressController extends Controller
                 }
             } else {
                 $errorMessage = $response->json()['error'] ?? 'Error from Postcodes.io API';
-                Log::error('Postcodes.io API error: ' . $response->body());
+                Log::error('Postcodes.io API error: '.$response->body());
+
                 return response()->json(['error' => $errorMessage], $response->status());
             }
         } catch (\Exception $e) {
-            Log::error('Postcodes.io API exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to connect to Postcodes.io API: ' . $e->getMessage()], 500);
+            Log::error('Postcodes.io API exception: '.$e->getMessage());
+
+            return response()->json(['error' => 'Failed to connect to Postcodes.io API: '.$e->getMessage()], 500);
         }
     }
 
@@ -104,32 +109,32 @@ class AddressController extends Controller
         $addressParts = [];
 
         // Add a placeholder for the house/building number
-        $addressParts[] = "Address " . $index;
+        $addressParts[] = 'Address '.$index;
 
         // Add the street if available
-        if (!empty($data['admin_district'])) {
+        if (! empty($data['admin_district'])) {
             $addressParts[] = $data['admin_district'];
         }
 
         // Add the locality if available
-        if (!empty($data['parish'])) {
+        if (! empty($data['parish'])) {
             $addressParts[] = $data['parish'];
-        } elseif (!empty($data['admin_ward'])) {
+        } elseif (! empty($data['admin_ward'])) {
             $addressParts[] = $data['admin_ward'];
         }
 
         // Add the town/city
-        if (!empty($data['admin_district'])) {
+        if (! empty($data['admin_district'])) {
             $addressParts[] = $data['admin_district'];
         }
 
         // Add the county
-        if (!empty($data['admin_county'])) {
+        if (! empty($data['admin_county'])) {
             $addressParts[] = $data['admin_county'];
         }
 
         // Add the postcode
-        if (!empty($data['postcode'])) {
+        if (! empty($data['postcode'])) {
             $addressParts[] = $data['postcode'];
         }
 

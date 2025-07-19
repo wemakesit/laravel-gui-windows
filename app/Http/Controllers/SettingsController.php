@@ -58,7 +58,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return [
                 'status' => 'error',
-                'message' => 'Error preparing API documentation URL: ' . $e->getMessage(),
+                'message' => 'Error preparing API documentation URL: '.$e->getMessage(),
             ];
         }
     }
@@ -82,7 +82,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Failed to proxy request to API server',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

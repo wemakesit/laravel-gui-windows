@@ -1,8 +1,8 @@
 <?php
 
+use App\Services\ApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Services\ApiService;
 
 /*
 |--------------------------------------------------------------------------

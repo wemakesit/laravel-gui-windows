@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Quotation;
 use App\Services\ApiService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -63,13 +62,13 @@ class QuotationController extends Controller
      */
     public function download(Quotation $quotation)
     {
-        if (!$quotation->file) {
+        if (! $quotation->file) {
             return back()->with('error', 'No file found for this quotation.');
         }
 
         $path = $quotation->file->path;
 
-        if (!Storage::exists($path)) {
+        if (! Storage::exists($path)) {
             return back()->with('error', 'File not found.');
         }
 

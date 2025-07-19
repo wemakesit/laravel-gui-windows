@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Quotation;
-use App\Models\QuotationFile;
 use App\Services\ApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -55,7 +54,7 @@ class QuotationCreateController extends Controller
 
         // Ensure each window has an options field
         foreach ($validated['windows'] as &$window) {
-            if (!isset($window['options'])) {
+            if (! isset($window['options'])) {
                 $window['options'] = 1; // Default to option 1 if not set
             }
 
@@ -78,13 +77,13 @@ class QuotationCreateController extends Controller
 
         if ($result['success']) {
             // Generate a unique filename with timestamp
-            $filename = 'quotation_' . date('Y-m-d_H-i-s') . '.pdf';
+            $filename = 'quotation_'.date('Y-m-d_H-i-s').'.pdf';
 
             // Store the PDF temporarily for download
-            $tempPath = storage_path('app/temp/' . $filename);
+            $tempPath = storage_path('app/temp/'.$filename);
 
             // Create the temp directory if it doesn't exist
-            if (!file_exists(storage_path('app/temp'))) {
+            if (! file_exists(storage_path('app/temp'))) {
                 mkdir(storage_path('app/temp'), 0755, true);
             }
 
@@ -92,10 +91,10 @@ class QuotationCreateController extends Controller
             file_put_contents($tempPath, $result['data']);
 
             // Create a permanent storage path for the PDF
-            $storagePath = 'quotations/' . $filename;
+            $storagePath = 'quotations/'.$filename;
 
             // Create the quotations directory if it doesn't exist
-            if (!file_exists(storage_path('app/quotations'))) {
+            if (! file_exists(storage_path('app/quotations'))) {
                 mkdir(storage_path('app/quotations'), 0755, true);
             }
 
@@ -108,7 +107,7 @@ class QuotationCreateController extends Controller
             // Create the quotation record
             $quotation = Quotation::create([
                 'reference_number' => Quotation::generateReferenceNumber(),
-                'customer_name' => $validated['customer_details']['first_name'] . ' ' . $validated['customer_details']['last_name'],
+                'customer_name' => $validated['customer_details']['first_name'].' '.$validated['customer_details']['last_name'],
                 'customer_email' => $validated['customer_details']['email'],
                 'customer_phone' => $validated['customer_details']['phone'],
                 'customer_address' => $validated['customer_details']['address'],
@@ -129,11 +128,12 @@ class QuotationCreateController extends Controller
             // Return the file as a download but don't delete it
             return response()->download($tempPath, $filename, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             ])->deleteFileAfterSend(true);
         }
 
         \Log::error('Failed to generate quotation', ['error' => $result['error'] ?? 'Unknown error']);
+
         return back()->with('error', $result['error'] ?? 'Failed to generate quotation');
     }
 
@@ -196,7 +196,7 @@ class QuotationCreateController extends Controller
                 foreach ($data['windows'] as $index => $window) {
                     if (isset($window['options'])) {
                         // Check if options is neither an integer nor an array
-                        if (!is_int($window['options']) && !is_array($window['options'])) {
+                        if (! is_int($window['options']) && ! is_array($window['options'])) {
                             $validator->errors()->add(
                                 "windows.{$index}.options",
                                 'The options field must be either an integer or an array.'

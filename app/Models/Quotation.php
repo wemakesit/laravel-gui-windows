@@ -54,7 +54,7 @@ class Quotation extends Model
         $prefix = 'QUO-';
         $date = date('Ymd');
         $random = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-        
-        return $prefix . $date . '-' . $random;
+
+        return $prefix.$date.'-'.$random;
     }
 }

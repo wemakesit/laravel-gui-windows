@@ -85,7 +85,7 @@ export interface Window {
   paint_finish?: string;
   hardware_finish?: string;
   cost: number;
-  extras: Array<{name: string, cost: number}>;
+  extras: Array<{ name: string; cost: number }>;
   options: number | number[];
   additional_info?: string;
 }

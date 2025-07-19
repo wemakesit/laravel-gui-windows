@@ -195,10 +195,10 @@ export default function Index({
               <div className='flex justify-between items-center mb-6'>
                 <h1 className='text-2xl font-semibold'>Settings</h1>
                 <Link
-                  href={route('quotations.index')}
+                  href={route('estimates.index')}
                   className='px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700'
                 >
-                  Back to Quotations
+                  Back to Estimates
                 </Link>
               </div>
 
@@ -342,7 +342,7 @@ export default function Index({
                               </code>
                             </li>
                             <li>
-                              <strong>Generate Quotation:</strong>{' '}
+                              <strong>Generate Estimate:</strong>{' '}
                               <code>{apiBaseUrl}/api/v1/quotations</code>
                             </li>
                           </ul>
@@ -468,7 +468,7 @@ export default function Index({
                             </h3>
                             <p className='text-sm text-gray-500 mb-4'>
                               Add, edit, or remove window types that will be
-                              available in quotations.
+                              available in estimates.
                             </p>
 
                             {/* This would typically be a dynamic list of window types */}
@@ -529,7 +529,7 @@ export default function Index({
                             </h3>
                             <p className='text-sm text-gray-500 mb-4'>
                               Add, edit, or remove extras that can be added to
-                              windows in quotations.
+                              windows in estimates.
                             </p>
 
                             {/* This would typically be a dynamic list of extras */}
@@ -589,7 +589,7 @@ export default function Index({
                             </h3>
                             <p className='text-sm text-gray-500 mb-4'>
                               Add, edit, or remove finishes that can be applied
-                              to windows in quotations.
+                              to windows in estimates.
                             </p>
 
                             {/* This would typically be a dynamic list of finishes */}

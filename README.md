@@ -1,13 +1,13 @@
-# Windows Quotation System
+# Window Estimate System
 
-A Laravel application with Inertia.js and React for creating window quotations through a wizard-style GUI interface. This application allows users to create quotations with customer information, add windows, and generate downloadable PDF files.
+A Laravel application with Inertia.js and React for creating window estimates through a wizard-style GUI interface. This application allows users to create estimates with customer information, add windows, and generate downloadable PDF files.
 
 ## Features
 
 - Wizard-style GUI with modal-focused steps
 - Customer information management
 - Window specification and configuration
-- PDF quotation generation and download
+- PDF estimate generation and download
 - Integration with external API for data processing
 
 ## Requirements
@@ -107,18 +107,19 @@ php artisan storage:link
 
 3. Access the application at [http://localhost:8000](http://localhost:8000)
 
-## Using the Quotation Wizard
+## Using the Window Estimate System
 
-1. Navigate to `/quotation` in your browser
-2. Follow the wizard steps:
+1. Navigate to the main dashboard at `/` in your browser
+2. Click "Create New Window Estimate" to start the wizard
+3. Follow the wizard steps:
    - Enter customer information
    - Add and configure windows
-   - Review the quotation
-3. Click "Generate" to create a downloadable PDF
+   - Review the estimate
+4. Click "Generate Estimate" to create a downloadable PDF
 
 ## File Storage
 
-Generated files and quotations are stored in the `storage/app/` directory. Make sure this directory is writable by the web server.
+Generated files and estimates are stored in the `storage/app/` directory. Make sure this directory is writable by the web server.
 
 ## API Integration
 

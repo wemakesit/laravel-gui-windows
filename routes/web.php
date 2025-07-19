@@ -1,32 +1,29 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\QuotationController;
-use App\Http\Controllers\QuotationCreateController;
+use App\Http\Controllers\EstimateController;
+use App\Http\Controllers\EstimateCreateController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingsController;
-use Inertia\Inertia;
 
-// Redirect root to quotations index
-Route::get('/', function () {
-    return redirect()->route('quotations.index');
-});
+// Main dashboard route
+Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Legacy dashboard route for compatibility
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.legacy');
 
-// Quotation Routes
-Route::get('/quotations', [QuotationController::class, 'index'])->name('quotations.index');
+// Estimate Routes
+Route::get('/estimates', [EstimateController::class, 'index'])->name('estimates.index');
 
-// Quotation Creation Routes - these need to be before the {quotation} routes to avoid conflicts
-Route::get('/quotations/create', [QuotationCreateController::class, 'index'])->name('quotations.create');
-Route::post('/quotations/generate', [QuotationCreateController::class, 'generate'])->name('quotations.generate');
+// Estimate Creation Routes - these need to be before the {estimate} routes to avoid conflicts
+Route::get('/estimates/create', [EstimateCreateController::class, 'index'])->name('estimates.create');
+Route::post('/estimates/generate', [EstimateCreateController::class, 'generate'])->name('estimates.generate');
 
-// Quotation Detail Routes - these must come after any specific routes like 'create'
-Route::get('/quotations/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
-Route::get('/quotations/{quotation}/download', [QuotationController::class, 'download'])->name('quotations.download');
-Route::get('/quotations/{quotation}/load', [QuotationController::class, 'load'])->name('quotations.load');
-Route::delete('/quotations/{quotation}', [QuotationController::class, 'destroy'])->name('quotations.destroy');
+// Estimate Detail Routes - these must come after any specific routes like 'create'
+Route::get('/estimates/{estimate}', [EstimateController::class, 'show'])->name('estimates.show');
+Route::get('/estimates/{estimate}/download', [EstimateController::class, 'download'])->name('estimates.download');
+Route::get('/estimates/{estimate}/load', [EstimateController::class, 'load'])->name('estimates.load');
+Route::delete('/estimates/{estimate}', [EstimateController::class, 'destroy'])->name('estimates.destroy');
 
 // Settings Routes
 Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');

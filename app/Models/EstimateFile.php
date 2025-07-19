@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class QuotationFile extends Model
+class EstimateFile extends Model
 {
     use HasFactory;
 
@@ -16,7 +16,7 @@ class QuotationFile extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'quotation_id',
+        'estimate_id',
         'filename',
         'path',
         'mime_type',
@@ -24,10 +24,10 @@ class QuotationFile extends Model
     ];
 
     /**
-     * Get the quotation that owns the file.
+     * Get the estimate that owns the file.
      */
-    public function quotation(): BelongsTo
+    public function estimate(): BelongsTo
     {
-        return $this->belongsTo(Quotation::class);
+        return $this->belongsTo(Estimate::class);
     }
 }

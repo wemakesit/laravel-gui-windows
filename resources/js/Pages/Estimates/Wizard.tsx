@@ -12,7 +12,7 @@ import WizardNavigation from './Components/WizardNavigation';
 import StepTransition from './Components/StepTransition';
 
 // Interface for the saved draft data
-interface QuotationDraft {
+interface EstimateDraft {
   formData: {
     customer_details: {
       title: string;
@@ -38,7 +38,7 @@ export default function Wizard({
   companyInfo,
   pdfTextConfig,
   options,
-  loadedQuotation,
+  loadedEstimate,
 }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [previousStep, setPreviousStep] = useState(1);
@@ -83,7 +83,7 @@ export default function Wizard({
   });
 
   const totalSteps = 6;
-  const STORAGE_KEY = 'quotation_draft';
+  const STORAGE_KEY = 'estimate_draft';
 
   // Function to clear the saved draft
   const clearDraft = () => {
@@ -94,12 +94,12 @@ export default function Wizard({
 
   // Load draft from localStorage on component mount
   useEffect(() => {
-    // Only try to load from localStorage if no quotation is loaded from the backend
-    if (!loadedQuotation && !isLoaded) {
+    // Only try to load from localStorage if no estimate is loaded from the backend
+    if (!loadedEstimate && !isLoaded) {
       try {
         const savedDraft = localStorage.getItem(STORAGE_KEY);
         if (savedDraft) {
-          const parsedDraft: QuotationDraft = JSON.parse(savedDraft);
+          const parsedDraft: EstimateDraft = JSON.parse(savedDraft);
 
           // Set the form data and navigation state
           setFormData(parsedDraft.formData);
@@ -131,7 +131,7 @@ export default function Wizard({
           setNotification({
             type: 'info',
             message:
-              'Draft quotation loaded. You can continue where you left off.',
+              'Draft estimate loaded. You can continue where you left off.',
           });
 
           // Clear notification after 3 seconds
@@ -147,30 +147,30 @@ export default function Wizard({
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  // Load quotation data if provided
+  // Load estimate data if provided
   useEffect(() => {
-    if (loadedQuotation && !isLoaded) {
-      console.log('Wizard: Loading quotation data', loadedQuotation);
+    if (loadedEstimate && !isLoaded) {
+      console.log('Wizard: Loading estimate data', loadedEstimate);
 
       // Log the customer details specifically
-      if (loadedQuotation.customer_details) {
+      if (loadedEstimate.customer_details) {
         console.log(
-          'Wizard: Customer details from loaded quotation',
-          loadedQuotation.customer_details
+          'Wizard: Customer details from loaded estimate',
+          loadedEstimate.customer_details
         );
       }
 
-      // Clear any existing draft when loading a quotation from the backend
+      // Clear any existing draft when loading an estimate from the backend
       clearDraft();
 
-      setFormData(loadedQuotation);
+      setFormData(loadedEstimate);
       setIsLoaded(true);
 
-      // When loading a quotation, set the highest step reached to the total steps
+      // When loading an estimate, set the highest step reached to the total steps
       // This allows the user to navigate to any step
       setHighestStepReached(totalSteps);
 
-      // Set all steps as valid when loading an existing quotation
+      // Set all steps as valid when loading an existing estimate
       const validationState: Record<number, boolean> = {};
       for (let i = 1; i <= totalSteps; i++) {
         validationState[i] = true;
@@ -189,7 +189,7 @@ export default function Wizard({
       setNotification({
         type: 'info',
         message:
-          'Quotation loaded successfully. You can now edit and regenerate it.',
+          'Estimate loaded successfully. You can now edit and regenerate it.',
       });
 
       // Clear notification after 3 seconds
@@ -197,14 +197,14 @@ export default function Wizard({
         setNotification(null);
       }, 3000);
     }
-  }, [loadedQuotation, isLoaded, totalSteps]);
+  }, [loadedEstimate, isLoaded, totalSteps]);
 
   // Save draft to localStorage when form data or navigation state changes
   useEffect(() => {
     // Only save if the form has been loaded (either from localStorage or from backend)
     // and we're not currently generating a PDF
     if (isLoaded && !isGenerating) {
-      const draftData: QuotationDraft = {
+      const draftData: EstimateDraft = {
         formData,
         currentStep,
         highestStepReached,
@@ -367,16 +367,16 @@ export default function Wizard({
     }
   };
 
-  const submitQuotation = () => {
+  const submitEstimate = () => {
     setIsGenerating(true);
     setNotification({
       type: 'info',
-      message: 'Generating quotation, please wait...',
+      message: 'Generating estimate, please wait...',
     });
 
     // Use axios for direct file download instead of Inertia
     axios
-      .post(route('quotations.generate'), formData, {
+      .post(route('estimates.generate'), formData, {
         responseType: 'blob', // Important for handling binary data
         headers: {
           'Content-Type': 'application/json',
@@ -395,7 +395,7 @@ export default function Wizard({
 
         // Get filename from Content-Disposition header or use default
         const contentDisposition = response.headers['content-disposition'];
-        let filename = 'quotation.pdf';
+        let filename = 'estimate.pdf';
 
         if (contentDisposition) {
           const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
@@ -414,7 +414,7 @@ export default function Wizard({
 
         setNotification({
           type: 'success',
-          message: 'Quotation downloaded successfully!',
+          message: 'Estimate downloaded successfully!',
         });
 
         // Clear notification after 3 seconds
@@ -424,10 +424,10 @@ export default function Wizard({
       })
       .catch(error => {
         setIsGenerating(false);
-        console.error('Failed to generate quotation:', error);
+        console.error('Failed to generate estimate:', error);
         setNotification({
           type: 'error',
-          message: 'Failed to generate quotation. Please try again.',
+          message: 'Failed to generate estimate. Please try again.',
         });
 
         // Clear notification after 3 seconds
@@ -510,7 +510,7 @@ export default function Wizard({
               pdfTextConfig={pdfTextConfig}
               options={options}
               updateFormData={updateFormData}
-              submitQuotation={submitQuotation}
+              submitEstimate={submitEstimate}
             />
           );
         default:
@@ -544,7 +544,7 @@ export default function Wizard({
 
   return (
     <>
-      <Head title='Window Quotation Wizard' />
+      <Head title='Window Estimate Wizard' />
 
       {notification && (
         <div
@@ -608,7 +608,7 @@ export default function Wizard({
               <div className='flex justify-between items-center mb-6'>
                 <div>
                   <h1 className='text-2xl font-semibold'>
-                    Window Quotation Wizard
+                    Window Estimate Wizard
                   </h1>
                   {hasDraft && lastSaved && (
                     <div className='flex items-center mt-2 text-sm text-gray-500'>
@@ -650,10 +650,10 @@ export default function Wizard({
                   )}
                 </div>
                 <Link
-                  href={route('quotations.index')}
+                  href={route('estimates.index')}
                   className='px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300'
                 >
-                  Back to Quotations
+                  Back to Estimates
                 </Link>
               </div>
 
@@ -671,7 +671,7 @@ export default function Wizard({
                 totalSteps={totalSteps}
                 nextStep={nextStep}
                 prevStep={prevStep}
-                submitQuotation={submitQuotation}
+                submitEstimate={submitEstimate}
                 isValid={stepValidation[currentStep] && !isGenerating} // Disable button if step is invalid or generating
               />
             </div>

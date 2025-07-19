@@ -9,7 +9,7 @@ interface ReviewStepProps {
   pdfTextConfig: any;
   options: any;
   updateFormData: (section: string, data: any) => void;
-  submitQuotation: () => void;
+  submitEstimate: () => void;
 }
 
 export default function ReviewStep({
@@ -21,7 +21,7 @@ export default function ReviewStep({
   pdfTextConfig,
   options,
   updateFormData,
-  submitQuotation,
+  submitEstimate,
 }: ReviewStepProps) {
   const [selectedCaveats, setSelectedCaveats] = useState(
     formData.selected_caveats || {}

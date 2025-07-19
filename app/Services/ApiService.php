@@ -604,7 +604,7 @@ class ApiService
     /**
      * Format window options to ensure they are properly structured
      *
-     * @param  array<string, mixed>  $data  The quotation data containing windows
+     * @param  array<string, mixed>  $data  The estimate data containing windows
      * @return array<string, mixed> The data with properly formatted window options
      */
     protected function formatWindowOptions(array $data): array
@@ -642,17 +642,17 @@ class ApiService
     }
 
     /**
-     * Generate quotation PDF from the API
+     * Generate estimate PDF from the API
      *
-     * @param  array<string, mixed>  $data  The quotation data to send to the API
+     * @param  array<string, mixed>  $data  The estimate data to send to the API
      * @return array<string, mixed> The API response with PDF data or error information
      */
-    public function generateQuotation(array $data): array
+    public function generateEstimate(array $data): array
     {
         $endpoint = '/api/v1/quotations';
 
         // Log the data being sent to the API for debugging
-        Log::info('Sending quotation data to API', ['data' => json_encode($data)]);
+        Log::info('Sending estimate data to API', ['data' => json_encode($data)]);
 
         // Format window options
         $data = $this->formatWindowOptions($data);
@@ -688,7 +688,7 @@ class ApiService
                 $contentType = $response->header('Content-Type');
 
                 // Log success
-                Log::info('Quotation generated successfully');
+                Log::info('Estimate generated successfully');
 
                 // Return success response with PDF data
                 return [
@@ -699,7 +699,7 @@ class ApiService
             }
 
             // If we get here, the API returned an error status code
-            Log::error('API returned error for quotation generation', [
+            Log::error('API returned error for estimate generation', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
@@ -735,7 +735,7 @@ class ApiService
                 }
             }
 
-            Log::error('API request exception for quotation generation', [
+            Log::error('API request exception for estimate generation', [
                 'message' => $errorMessage,
                 'status' => $statusCode,
                 'trace' => $e->getTraceAsString(),
@@ -749,7 +749,7 @@ class ApiService
                 'data' => $responseData,
             ];
         } catch (ConnectionException $e) {
-            Log::error('API connection exception for quotation generation', [
+            Log::error('API connection exception for estimate generation', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -760,7 +760,7 @@ class ApiService
                 'status' => 503, // Service Unavailable
             ];
         } catch (Exception $e) {
-            Log::error('Unexpected exception for quotation generation', [
+            Log::error('Unexpected exception for estimate generation', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

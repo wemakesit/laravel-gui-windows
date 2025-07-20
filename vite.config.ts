@@ -15,4 +15,9 @@ export default defineConfig({
             '@': '/resources/js',
         },
     },
+    define: {
+        // Make environment variables available to the frontend
+        'import.meta.env.VITE_COUCHDB_CONFIG_URL': JSON.stringify(process.env.COUCHDB_CONFIG_URL),
+        'import.meta.env.VITE_COUCHDB_ESTIMATES_URL': JSON.stringify(process.env.COUCHDB_ESTIMATES_URL),
+    },
 });

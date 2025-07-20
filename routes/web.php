@@ -6,6 +6,7 @@ use App\Http\Controllers\EstimateCreateController;
 use App\Http\Controllers\OfflineEstimateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingsController;
+use Inertia\Inertia;
 
 // Main dashboard route
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -37,6 +38,11 @@ Route::post('/settings/pdf-text-config', [SettingsController::class, 'updatePdfT
 
 // API Proxy Route - to avoid CORS issues when accessing the API directly from the browser
 Route::any('/api-proxy/{path?}', [SettingsController::class, 'proxyApiRequest'])->where('path', '.*')->name('api.proxy');
+
+// Sync Test Route - for testing PouchDB sync functionality
+Route::get('/sync-test', function () {
+    return Inertia::render('SyncTest');
+})->name('sync.test');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

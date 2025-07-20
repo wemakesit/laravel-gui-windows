@@ -1,367 +1,372 @@
 /**
- * PouchDB Service
- * Handles PouchDB operations and CouchDB synchronisation for configuration data
+ * PouchDB Service for offline data storage and CouchDB synchronisation
+ * Provides bidirectional sync with conflict resolution
  */
 
-// @ts-ignore
 import PouchDB from 'pouchdb';
 
-export interface ConfigDocument {
-  _id: string;
-  _rev?: string;
-  type: 'window_types' | 'extras' | 'finishes' | 'company_info' | 'pdf_text_config' | 'options';
-  data: any;
-  lastUpdated: number;
-  version: number;
+export interface SyncStatus {
+    isOnline: boolean;
+    lastSync: Date | null;
+    syncInProgress: boolean;
+    error: string | null;
+    docsRead: number;
+    docsWritten: number;
+    docWriteFailures: number;
+    errors: any[];
 }
 
-export interface SyncStatus {
-  isOnline: boolean;
-  lastSync: Date | null;
-  syncInProgress: boolean;
-  error: string | null;
-  documentsCount: number;
+export interface WindowConfig {
+    _id: string;
+    _rev?: string;
+    type: 'window_type' | 'extra' | 'finish';
+    name: string;
+    price: number;
+    description?: string;
+    category?: string;
+    updatedAt: string;
+}
+
+export interface WindowEstimate {
+    _id: string;
+    _rev?: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    customerAddress: string;
+    windows: any[];
+    totalPrice: number;
+    createdAt: string;
+    updatedAt: string;
+    status: 'draft' | 'sent' | 'approved' | 'rejected';
 }
 
 class PouchDBService {
-  private configDB: any;
-  private estimatesDB: any;
-  private remoteConfigURL: string;
-  private remoteEstimatesURL: string;
-  private syncStatus: SyncStatus;
-  private syncHandlers: any[] = [];
-
-  constructor() {
-    this.remoteConfigURL = process.env.COUCHDB_CONFIG_URL || 'http://localhost:5984/window_config';
-    this.remoteEstimatesURL = process.env.COUCHDB_ESTIMATES_URL || 'http://localhost:5984/window_estimates';
-    
-    this.syncStatus = {
-      isOnline: navigator.onLine,
-      lastSync: null,
-      syncInProgress: false,
-      error: null,
-      documentsCount: 0
+    private configDB: PouchDB.Database;
+    private estimatesDB: PouchDB.Database;
+    private configSync: PouchDB.Replication.Sync<{}> | null = null;
+    private estimatesSync: PouchDB.Replication.Sync<{}> | null = null;
+    private syncStatus: SyncStatus = {
+        isOnline: navigator.onLine,
+        lastSync: null,
+        syncInProgress: false,
+        error: null,
+        docsRead: 0,
+        docsWritten: 0,
+        docWriteFailures: 0,
+        errors: []
     };
+    private statusCallbacks: ((status: SyncStatus) => void)[] = [];
 
-    this.initializeDatabases();
-    this.setupOnlineDetection();
-  }
+    constructor() {
+        // Initialize local databases
+        this.configDB = new PouchDB('window_config');
+        this.estimatesDB = new PouchDB('window_estimates');
 
-  /**
-   * Initialize PouchDB databases
-   */
-  private async initializeDatabases(): Promise<void> {
-    try {
-      // Initialize configuration database
-      this.configDB = new PouchDB('window_config', {
-        auto_compaction: true,
-        revs_limit: 10
-      });
+        // Listen for online/offline events
+        window.addEventListener('online', this.handleOnline.bind(this));
+        window.addEventListener('offline', this.handleOffline.bind(this));
 
-      // Initialize estimates database
-      this.estimatesDB = new PouchDB('window_estimates', {
-        auto_compaction: true,
-        revs_limit: 10
-      });
-
-      console.log('PouchDB: Databases initialized successfully');
-      await this.updateDocumentCount();
-    } catch (error) {
-      console.error('PouchDB: Failed to initialize databases:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Setup online/offline detection
-   */
-  private setupOnlineDetection(): void {
-    window.addEventListener('online', () => {
-      this.syncStatus.isOnline = true;
-      console.log('PouchDB: Back online');
-    });
-
-    window.addEventListener('offline', () => {
-      this.syncStatus.isOnline = false;
-      console.log('PouchDB: Gone offline');
-    });
-  }
-
-  /**
-   * Update document count
-   */
-  private async updateDocumentCount(): Promise<void> {
-    try {
-      const info = await this.configDB.info();
-      this.syncStatus.documentsCount = info.doc_count;
-    } catch (error) {
-      console.error('PouchDB: Error updating document count:', error);
-    }
-  }
-
-  /**
-   * Save configuration document
-   */
-  public async saveConfig(type: ConfigDocument['type'], data: any): Promise<void> {
-    try {
-      const doc: ConfigDocument = {
-        _id: `config_${type}`,
-        type,
-        data,
-        lastUpdated: Date.now(),
-        version: 1
-      };
-
-      // Try to get existing document to preserve _rev
-      try {
-        const existing = await this.configDB.get(doc._id);
-        doc._rev = existing._rev;
-        doc.version = (existing.version || 0) + 1;
-      } catch (error) {
-        // Document doesn't exist, that's fine
-      }
-
-      await this.configDB.put(doc);
-      await this.updateDocumentCount();
-      
-      console.log(`PouchDB: Saved ${type} configuration`);
-    } catch (error) {
-      console.error(`PouchDB: Error saving ${type} configuration:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get configuration document
-   */
-  public async getConfig(type: ConfigDocument['type']): Promise<any | null> {
-    try {
-      const doc = await this.configDB.get(`config_${type}`);
-      return doc.data;
-    } catch (error) {
-      if (error.status === 404) {
-        return null; // Document not found
-      }
-      console.error(`PouchDB: Error getting ${type} configuration:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all configuration documents
-   */
-  public async getAllConfig(): Promise<Record<string, any>> {
-    try {
-      const result = await this.configDB.allDocs({
-        include_docs: true,
-        startkey: 'config_',
-        endkey: 'config_\ufff0'
-      });
-
-      const config: Record<string, any> = {};
-      result.rows.forEach((row: any) => {
-        if (row.doc && row.doc.type) {
-          config[row.doc.type] = row.doc.data;
+        // Start sync if online
+        if (navigator.onLine) {
+            this.startSync();
         }
-      });
-
-      return config;
-    } catch (error) {
-      console.error('PouchDB: Error getting all configuration:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Force sync with CouchDB (overwrite local with remote)
-   */
-  public async forceSync(): Promise<void> {
-    if (!this.syncStatus.isOnline) {
-      throw new Error('Cannot sync while offline');
     }
 
-    if (this.syncStatus.syncInProgress) {
-      throw new Error('Sync already in progress');
+    /**
+     * Subscribe to sync status updates
+     */
+    onSyncStatusChange(callback: (status: SyncStatus) => void): () => void {
+        this.statusCallbacks.push(callback);
+        // Return unsubscribe function
+        return () => {
+            const index = this.statusCallbacks.indexOf(callback);
+            if (index > -1) {
+                this.statusCallbacks.splice(index, 1);
+            }
+        };
     }
 
-    this.syncStatus.syncInProgress = true;
-    this.syncStatus.error = null;
+    /**
+     * Get current sync status
+     */
+    getSyncStatus(): SyncStatus {
+        return { ...this.syncStatus };
+    }
 
-    try {
-      console.log('PouchDB: Starting force sync...');
+    /**
+     * Handle online event
+     */
+    private handleOnline(): void {
+        this.syncStatus.isOnline = true;
+        this.updateSyncStatus();
+        this.startSync();
+    }
 
-      // Destroy local database and recreate to ensure clean sync
-      await this.configDB.destroy();
-      this.configDB = new PouchDB('window_config', {
-        auto_compaction: true,
-        revs_limit: 10
-      });
+    /**
+     * Handle offline event
+     */
+    private handleOffline(): void {
+        this.syncStatus.isOnline = false;
+        this.updateSyncStatus();
+        this.stopSync();
+    }
 
-      // Replicate from remote (one-way sync from CouchDB to PouchDB)
-      const replication = this.configDB.replicate.from(this.remoteConfigURL, {
-        live: false,
-        retry: false
-      });
+    /**
+     * Update sync status and notify callbacks
+     */
+    private updateSyncStatus(): void {
+        this.statusCallbacks.forEach(callback => callback(this.syncStatus));
+    }
 
-      await new Promise((resolve, reject) => {
-        replication.on('complete', (info: any) => {
-          console.log('PouchDB: Force sync completed', info);
-          resolve(info);
+    /**
+     * Start bidirectional sync with CouchDB
+     */
+    async startSync(): Promise<void> {
+        if (!navigator.onLine) return;
+
+        const configUrl = import.meta.env.VITE_COUCHDB_CONFIG_URL || 
+                         process.env.COUCHDB_CONFIG_URL;
+        const estimatesUrl = import.meta.env.VITE_COUCHDB_ESTIMATES_URL || 
+                            process.env.COUCHDB_ESTIMATES_URL;
+
+        if (!configUrl || !estimatesUrl) {
+            console.warn('CouchDB URLs not configured, sync disabled');
+            return;
+        }
+
+        try {
+            // Start config sync
+            this.configSync = this.configDB.sync(configUrl, {
+                live: true,
+                retry: true,
+                heartbeat: 10000,
+                timeout: 30000
+            });
+
+            // Start estimates sync
+            this.estimatesSync = this.estimatesDB.sync(estimatesUrl, {
+                live: true,
+                retry: true,
+                heartbeat: 10000,
+                timeout: 30000
+            });
+
+            this.setupSyncEventHandlers();
+            
+        } catch (error) {
+            console.error('Failed to start sync:', error);
+            this.syncStatus.error = error instanceof Error ? error.message : 'Sync failed';
+            this.updateSyncStatus();
+        }
+    }
+
+    /**
+     * Stop sync
+     */
+    stopSync(): void {
+        if (this.configSync) {
+            this.configSync.cancel();
+            this.configSync = null;
+        }
+        if (this.estimatesSync) {
+            this.estimatesSync.cancel();
+            this.estimatesSync = null;
+        }
+        this.syncStatus.syncInProgress = false;
+        this.updateSyncStatus();
+    }
+
+    /**
+     * Setup event handlers for sync
+     */
+    private setupSyncEventHandlers(): void {
+        const handleSyncChange = (info: any) => {
+            this.syncStatus.docsRead += info.change?.docs_read || 0;
+            this.syncStatus.docsWritten += info.change?.docs_written || 0;
+            this.syncStatus.lastSync = new Date();
+            this.updateSyncStatus();
+        };
+
+        const handleSyncPaused = () => {
+            this.syncStatus.syncInProgress = false;
+            this.updateSyncStatus();
+        };
+
+        const handleSyncActive = () => {
+            this.syncStatus.syncInProgress = true;
+            this.syncStatus.error = null;
+            this.updateSyncStatus();
+        };
+
+        const handleSyncError = (err: any) => {
+            console.error('Sync error:', err);
+            this.syncStatus.error = err.message || 'Sync error occurred';
+            this.syncStatus.errors.push(err);
+            this.syncStatus.syncInProgress = false;
+            this.updateSyncStatus();
+        };
+
+        // Setup handlers for both syncs
+        [this.configSync, this.estimatesSync].forEach(sync => {
+            if (sync) {
+                sync.on('change', handleSyncChange);
+                sync.on('paused', handleSyncPaused);
+                sync.on('active', handleSyncActive);
+                sync.on('error', handleSyncError);
+            }
         });
-
-        replication.on('error', (error: any) => {
-          console.error('PouchDB: Force sync failed', error);
-          reject(error);
-        });
-      });
-
-      this.syncStatus.lastSync = new Date();
-      await this.updateDocumentCount();
-
-      // Notify sync handlers
-      this.notifySyncHandlers();
-
-    } catch (error) {
-      console.error('PouchDB: Force sync error:', error);
-      this.syncStatus.error = error.message;
-      throw error;
-    } finally {
-      this.syncStatus.syncInProgress = false;
-    }
-  }
-
-  /**
-   * Setup continuous sync (bidirectional)
-   */
-  public setupContinuousSync(): void {
-    if (!this.syncStatus.isOnline) {
-      console.log('PouchDB: Cannot setup continuous sync while offline');
-      return;
     }
 
-    try {
-      // Setup bidirectional sync for configuration
-      const configSync = this.configDB.sync(this.remoteConfigURL, {
-        live: true,
-        retry: true,
-        back_off_function: (delay: number) => {
-          return Math.min(delay * 2, 60000); // Max 1 minute delay
+    /**
+     * Force sync - overwrite local data with remote data
+     */
+    async forceSync(): Promise<void> {
+        if (!navigator.onLine) {
+            throw new Error('Cannot force sync while offline');
         }
-      });
 
-      configSync.on('change', (info: any) => {
-        console.log('PouchDB: Config sync change', info);
-        this.syncStatus.lastSync = new Date();
-        this.updateDocumentCount();
-        this.notifySyncHandlers();
-      });
+        const configUrl = import.meta.env.VITE_COUCHDB_CONFIG_URL || 
+                         process.env.COUCHDB_CONFIG_URL;
+        const estimatesUrl = import.meta.env.VITE_COUCHDB_ESTIMATES_URL || 
+                            process.env.COUCHDB_ESTIMATES_URL;
 
-      configSync.on('error', (error: any) => {
-        console.error('PouchDB: Config sync error', error);
-        this.syncStatus.error = error.message;
-      });
-
-      // Setup bidirectional sync for estimates
-      const estimatesSync = this.estimatesDB.sync(this.remoteEstimatesURL, {
-        live: true,
-        retry: true,
-        back_off_function: (delay: number) => {
-          return Math.min(delay * 2, 60000);
+        if (!configUrl || !estimatesUrl) {
+            throw new Error('CouchDB URLs not configured');
         }
-      });
 
-      estimatesSync.on('change', (info: any) => {
-        console.log('PouchDB: Estimates sync change', info);
-        this.syncStatus.lastSync = new Date();
-      });
+        try {
+            this.syncStatus.syncInProgress = true;
+            this.syncStatus.error = null;
+            this.updateSyncStatus();
 
-      estimatesSync.on('error', (error: any) => {
-        console.error('PouchDB: Estimates sync error', error);
-      });
+            // Stop current sync
+            this.stopSync();
 
-      console.log('PouchDB: Continuous sync setup completed');
-    } catch (error) {
-      console.error('PouchDB: Error setting up continuous sync:', error);
-      this.syncStatus.error = error.message;
+            // Clear local databases
+            await this.configDB.destroy();
+            await this.estimatesDB.destroy();
+
+            // Recreate databases
+            this.configDB = new PouchDB('window_config');
+            this.estimatesDB = new PouchDB('window_estimates');
+
+            // Pull from remote
+            await this.configDB.replicate.from(configUrl);
+            await this.estimatesDB.replicate.from(estimatesUrl);
+
+            this.syncStatus.lastSync = new Date();
+            this.syncStatus.syncInProgress = false;
+            this.updateSyncStatus();
+
+            // Restart live sync
+            this.startSync();
+
+        } catch (error) {
+            console.error('Force sync failed:', error);
+            this.syncStatus.error = error instanceof Error ? error.message : 'Force sync failed';
+            this.syncStatus.syncInProgress = false;
+            this.updateSyncStatus();
+            throw error;
+        }
     }
-  }
 
-  /**
-   * Get sync status
-   */
-  public getSyncStatus(): SyncStatus {
-    return { ...this.syncStatus };
-  }
-
-  /**
-   * Add sync status change handler
-   */
-  public onSyncChange(handler: (status: SyncStatus) => void): void {
-    this.syncHandlers.push(handler);
-  }
-
-  /**
-   * Remove sync status change handler
-   */
-  public removeSyncHandler(handler: (status: SyncStatus) => void): void {
-    const index = this.syncHandlers.indexOf(handler);
-    if (index > -1) {
-      this.syncHandlers.splice(index, 1);
+    /**
+     * Get window configuration data
+     */
+    async getWindowConfig(): Promise<WindowConfig[]> {
+        try {
+            const result = await this.configDB.allDocs({ include_docs: true });
+            return result.rows
+                .filter(row => row.doc && !row.doc._id.startsWith('_design'))
+                .map(row => row.doc as WindowConfig);
+        } catch (error) {
+            console.error('Failed to get window config:', error);
+            return [];
+        }
     }
-  }
 
-  /**
-   * Notify all sync handlers
-   */
-  private notifySyncHandlers(): void {
-    const status = this.getSyncStatus();
-    this.syncHandlers.forEach(handler => {
-      try {
-        handler(status);
-      } catch (error) {
-        console.error('PouchDB: Error in sync handler:', error);
-      }
-    });
-  }
+    /**
+     * Save window configuration
+     */
+    async saveWindowConfig(config: Omit<WindowConfig, '_id' | '_rev'>): Promise<WindowConfig> {
+        const doc: WindowConfig = {
+            ...config,
+            _id: `${config.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            updatedAt: new Date().toISOString()
+        };
 
-  /**
-   * Save estimate to PouchDB
-   */
-  public async saveEstimate(estimate: any): Promise<void> {
-    try {
-      const doc = {
-        _id: `estimate_${estimate.id}`,
-        type: 'estimate',
-        data: estimate,
-        lastUpdated: Date.now()
-      };
-
-      await this.estimatesDB.put(doc);
-      console.log('PouchDB: Estimate saved:', estimate.id);
-    } catch (error) {
-      console.error('PouchDB: Error saving estimate:', error);
-      throw error;
+        const result = await this.configDB.put(doc);
+        return { ...doc, _rev: result.rev };
     }
-  }
 
-  /**
-   * Get all estimates from PouchDB
-   */
-  public async getAllEstimates(): Promise<any[]> {
-    try {
-      const result = await this.estimatesDB.allDocs({
-        include_docs: true,
-        startkey: 'estimate_',
-        endkey: 'estimate_\ufff0'
-      });
-
-      return result.rows.map((row: any) => row.doc.data);
-    } catch (error) {
-      console.error('PouchDB: Error getting estimates:', error);
-      throw error;
+    /**
+     * Get estimates
+     */
+    async getEstimates(): Promise<WindowEstimate[]> {
+        try {
+            const result = await this.estimatesDB.allDocs({ include_docs: true });
+            return result.rows
+                .filter(row => row.doc && !row.doc._id.startsWith('_design'))
+                .map(row => row.doc as WindowEstimate)
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        } catch (error) {
+            console.error('Failed to get estimates:', error);
+            return [];
+        }
     }
-  }
+
+    /**
+     * Save estimate
+     */
+    async saveEstimate(estimate: Omit<WindowEstimate, '_id' | '_rev'>): Promise<WindowEstimate> {
+        const doc: WindowEstimate = {
+            ...estimate,
+            _id: `estimate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            updatedAt: new Date().toISOString()
+        };
+
+        const result = await this.estimatesDB.put(doc);
+        return { ...doc, _rev: result.rev };
+    }
+
+    /**
+     * Get estimate by ID
+     */
+    async getEstimate(id: string): Promise<WindowEstimate | null> {
+        try {
+            const doc = await this.estimatesDB.get(id);
+            return doc as WindowEstimate;
+        } catch (error) {
+            if ((error as any).status === 404) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Update estimate
+     */
+    async updateEstimate(estimate: WindowEstimate): Promise<WindowEstimate> {
+        const updatedDoc = {
+            ...estimate,
+            updatedAt: new Date().toISOString()
+        };
+
+        const result = await this.estimatesDB.put(updatedDoc);
+        return { ...updatedDoc, _rev: result.rev };
+    }
+
+    /**
+     * Delete estimate
+     */
+    async deleteEstimate(id: string): Promise<void> {
+        const doc = await this.estimatesDB.get(id);
+        await this.estimatesDB.remove(doc);
+    }
 }
 
 // Export singleton instance
 export const pouchDBService = new PouchDBService();
+export default pouchDBService;

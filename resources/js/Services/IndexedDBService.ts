@@ -266,17 +266,39 @@ class IndexedDBService {
    */
   public async getConfig(key: string): Promise<any | null> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['config'], 'readonly');
       const store = transaction.objectStore('config');
       const request = store.get(key);
-      
+
       request.onsuccess = () => {
         const result = request.result;
         resolve(result ? result.data : null);
       };
-      
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
+  }
+
+  /**
+   * Delete configuration data
+   */
+  public async deleteConfig(key: string): Promise<void> {
+    const db = await this.ensureDB();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['config'], 'readwrite');
+      const store = transaction.objectStore('config');
+      const request = store.delete(key);
+
+      request.onsuccess = () => {
+        console.log('IndexedDB: Config deleted:', key);
+        resolve();
+      };
+
       request.onerror = () => {
         reject(request.error);
       };

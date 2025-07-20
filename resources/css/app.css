@@ -1,6 +1,6 @@
+/* Import touch-optimised styles */
+@import './touch-optimised.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import touch-optimised styles */
-@import './touch-optimised.css';

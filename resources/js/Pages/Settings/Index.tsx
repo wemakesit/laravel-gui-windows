@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 // Note: Tab components are deprecated in the current version of @headlessui/react
 // They should be updated to the newer API in a future update
@@ -11,6 +11,8 @@ import { CompanyInfo, WindowType, Extra, Finish, PdfTextConfig } from '@/types';
 import PWADebug from '../../Components/PWADebug';
 import InstallPrompt from '../../Components/InstallPrompt';
 import OfflineStatus from '../../Components/OfflineStatus';
+import { configCacheService } from '../../Services/ConfigCacheService';
+import { pouchDBService, SyncStatus } from '../../Services/PouchDBService';
 
 interface ApiDocs {
   apiBaseUrl?: string;
@@ -42,6 +44,56 @@ export default function Index({
   // Confirmation modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmationType, setConfirmationType] = useState(null); // 'company_info', 'window_types', 'extras', 'finishes', 'pdf_text'
+
+  // PouchDB sync state
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({
+    isOnline: navigator.onLine,
+    lastSync: null,
+    syncInProgress: false,
+    error: null,
+    documentsCount: 0
+  });
+  const [cachedConfig, setCachedConfig] = useState({
+    windowTypes: [],
+    extras: [],
+    finishes: [],
+    companyInfo: {},
+    options: []
+  });
+
+  // Load cached configuration and setup sync monitoring
+  useEffect(() => {
+    const loadCachedConfig = async () => {
+      try {
+        const config = await configCacheService.getConfig();
+        setCachedConfig(config);
+
+        // Update sync status
+        const status = configCacheService.getSyncStatus();
+        setSyncStatus(status);
+      } catch (error) {
+        console.error('Settings: Error loading cached config:', error);
+      }
+    };
+
+    loadCachedConfig();
+
+    // Setup sync status monitoring
+    const handleSyncChange = (status: SyncStatus) => {
+      setSyncStatus(status);
+      // Reload cached config after sync
+      loadCachedConfig();
+    };
+
+    pouchDBService.onSyncChange(handleSyncChange);
+
+    // Setup continuous sync
+    configCacheService.setupContinuousSync();
+
+    return () => {
+      pouchDBService.removeSyncHandler(handleSyncChange);
+    };
+  }, []);
 
   // Initialize forms for each configuration section
   const companyInfoForm = useForm({
@@ -91,6 +143,36 @@ export default function Index({
   //         // setApiStatus({ status: 'error', message: error.message });
   //     }
   // };
+
+  // Force sync with CouchDB
+  const handleForceSync = async () => {
+    if (!navigator.onLine) {
+      alert('Cannot sync while offline. Please check your internet connection.');
+      return;
+    }
+
+    if (syncStatus.syncInProgress) {
+      alert('Sync already in progress. Please wait...');
+      return;
+    }
+
+    try {
+      setSyncStatus(prev => ({ ...prev, syncInProgress: true, error: null }));
+      await configCacheService.forceSync();
+
+      // Reload cached config after sync
+      const config = await configCacheService.getConfig();
+      setCachedConfig(config);
+
+      alert('Configuration synced successfully from CouchDB!');
+    } catch (error) {
+      console.error('Settings: Force sync failed:', error);
+      setSyncStatus(prev => ({ ...prev, error: error.message }));
+      alert(`Sync failed: ${error.message}`);
+    } finally {
+      setSyncStatus(prev => ({ ...prev, syncInProgress: false }));
+    }
+  };
 
   // Handle form submissions
   const openConfirmModal = (type: string) => {
@@ -290,6 +372,18 @@ export default function Index({
                     }
                   >
                     PWA & Offline
+                  </Tab>
+                  <Tab
+                    className={({ selected }) =>
+                      `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+                                            ${
+                                              selected
+                                                ? 'bg-white text-blue-700 shadow'
+                                                : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'
+                                            }`
+                    }
+                  >
+                    Data Sync
                   </Tab>
                 </Tab.List>
                 <Tab.Panels>
@@ -745,6 +839,181 @@ export default function Index({
                             <li>• Address lookup functionality</li>
                           </ul>
                         </div>
+                      </div>
+                    </div>
+                  </Tab.Panel>
+
+                  {/* Data Sync Panel */}
+                  <Tab.Panel>
+                    <div className='rounded-xl bg-white p-3'>
+                      <h2 className='text-xl font-semibold mb-4'>PouchDB Data Synchronisation</h2>
+
+                      {/* Sync Status */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Sync Status</h3>
+                        <div className='bg-gray-50 p-4 rounded-lg'>
+                          <div className='grid grid-cols-2 gap-4'>
+                            <div>
+                              <span className='text-sm font-medium text-gray-600'>Connection:</span>
+                              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                                syncStatus.isOnline
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {syncStatus.isOnline ? 'Online' : 'Offline'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className='text-sm font-medium text-gray-600'>Documents:</span>
+                              <span className='ml-2 text-sm text-gray-900'>{syncStatus.documentsCount}</span>
+                            </div>
+                            <div>
+                              <span className='text-sm font-medium text-gray-600'>Last Sync:</span>
+                              <span className='ml-2 text-sm text-gray-900'>
+                                {syncStatus.lastSync
+                                  ? new Date(syncStatus.lastSync).toLocaleString()
+                                  : 'Never'
+                                }
+                              </span>
+                            </div>
+                            <div>
+                              <span className='text-sm font-medium text-gray-600'>Status:</span>
+                              <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                                syncStatus.syncInProgress
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : syncStatus.error
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-green-100 text-green-800'
+                              }`}>
+                                {syncStatus.syncInProgress
+                                  ? 'Syncing...'
+                                  : syncStatus.error
+                                    ? 'Error'
+                                    : 'Ready'
+                                }
+                              </span>
+                            </div>
+                          </div>
+
+                          {syncStatus.error && (
+                            <div className='mt-3 p-3 bg-red-50 border border-red-200 rounded'>
+                              <p className='text-sm text-red-700'>{syncStatus.error}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Force Sync Button */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Manual Sync</h3>
+                        <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4'>
+                          <p className='text-sm text-yellow-800 mb-2'>
+                            <strong>Warning:</strong> Force sync will overwrite all local configuration data with data from CouchDB.
+                          </p>
+                          <p className='text-sm text-yellow-700'>
+                            This action cannot be undone. Make sure your CouchDB contains the correct configuration data.
+                          </p>
+                        </div>
+                        <PrimaryButton
+                          onClick={handleForceSync}
+                          disabled={!syncStatus.isOnline || syncStatus.syncInProgress}
+                          className='bg-blue-600 hover:bg-blue-700'
+                        >
+                          {syncStatus.syncInProgress ? 'Syncing...' : 'Force Sync from CouchDB'}
+                        </PrimaryButton>
+                      </div>
+
+                      {/* Cached Configuration Display */}
+                      <div className='mb-6'>
+                        <h3 className='text-lg font-medium mb-3'>Cached Configuration</h3>
+                        <div className='space-y-4'>
+                          <div className='bg-gray-50 p-4 rounded-lg'>
+                            <h4 className='font-medium text-gray-900 mb-2'>Window Types ({cachedConfig.windowTypes.length})</h4>
+                            {cachedConfig.windowTypes.length > 0 ? (
+                              <div className='text-sm text-gray-600'>
+                                {cachedConfig.windowTypes.slice(0, 3).map((type: any, index: number) => (
+                                  <div key={index} className='flex justify-between'>
+                                    <span>{type.Type || type.name || 'Unknown'}</span>
+                                    <span>£{type.Cost || type.price || 0}</span>
+                                  </div>
+                                ))}
+                                {cachedConfig.windowTypes.length > 3 && (
+                                  <div className='text-xs text-gray-500 mt-1'>
+                                    ...and {cachedConfig.windowTypes.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className='text-sm text-gray-500'>No window types cached</p>
+                            )}
+                          </div>
+
+                          <div className='bg-gray-50 p-4 rounded-lg'>
+                            <h4 className='font-medium text-gray-900 mb-2'>Extras ({cachedConfig.extras.length})</h4>
+                            {cachedConfig.extras.length > 0 ? (
+                              <div className='text-sm text-gray-600'>
+                                {cachedConfig.extras.slice(0, 3).map((extra: any, index: number) => (
+                                  <div key={index} className='flex justify-between'>
+                                    <span>{extra.Name || extra.name || 'Unknown'}</span>
+                                    <span>£{extra.Cost || extra.price || 0}</span>
+                                  </div>
+                                ))}
+                                {cachedConfig.extras.length > 3 && (
+                                  <div className='text-xs text-gray-500 mt-1'>
+                                    ...and {cachedConfig.extras.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className='text-sm text-gray-500'>No extras cached</p>
+                            )}
+                          </div>
+
+                          <div className='bg-gray-50 p-4 rounded-lg'>
+                            <h4 className='font-medium text-gray-900 mb-2'>Finishes ({cachedConfig.finishes.length})</h4>
+                            {cachedConfig.finishes.length > 0 ? (
+                              <div className='text-sm text-gray-600'>
+                                {cachedConfig.finishes.slice(0, 3).map((finish: any, index: number) => (
+                                  <div key={index} className='flex justify-between'>
+                                    <span>{finish.Name || finish.name || 'Unknown'}</span>
+                                    <span>£{finish.Cost || finish.price || 0}</span>
+                                  </div>
+                                ))}
+                                {cachedConfig.finishes.length > 3 && (
+                                  <div className='text-xs text-gray-500 mt-1'>
+                                    ...and {cachedConfig.finishes.length - 3} more
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className='text-sm text-gray-500'>No finishes cached</p>
+                            )}
+                          </div>
+
+                          <div className='bg-gray-50 p-4 rounded-lg'>
+                            <h4 className='font-medium text-gray-900 mb-2'>Company Information</h4>
+                            {Object.keys(cachedConfig.companyInfo).length > 0 ? (
+                              <div className='text-sm text-gray-600'>
+                                <div>Name: {cachedConfig.companyInfo.name || 'Not set'}</div>
+                                <div>Address: {cachedConfig.companyInfo.address?.line1 || 'Not set'}</div>
+                              </div>
+                            ) : (
+                              <p className='text-sm text-gray-500'>No company information cached</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Instructions */}
+                      <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+                        <h4 className='font-medium text-blue-900 mb-2'>How Data Sync Works</h4>
+                        <ul className='text-sm text-blue-800 space-y-1'>
+                          <li>• Configuration data is stored locally in PouchDB</li>
+                          <li>• Data automatically syncs with CouchDB when online</li>
+                          <li>• Force sync overwrites local data with server data</li>
+                          <li>• Estimates work offline using cached configuration</li>
+                          <li>• All data persists between browser sessions</li>
+                        </ul>
                       </div>
                     </div>
                   </Tab.Panel>

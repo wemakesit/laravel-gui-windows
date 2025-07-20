@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import axios from 'axios';
-import { usePWA } from '../../Hooks/usePWA';
-import OfflineStatus from '../../Components/OfflineStatus';
+import { Head, Link, router } from '@inertiajs/react';
 import CustomerInfoStep from './Steps/CustomerInfoStep';
 import WindowSelectionStep from './Steps/WindowSelectionStep';
 import WindowConfigStep from './Steps/WindowConfigStep';
@@ -12,6 +9,10 @@ import ReviewStep from './Steps/ReviewStep';
 import WizardProgress from './Components/WizardProgress';
 import WizardNavigation from './Components/WizardNavigation';
 import StepTransition from './Components/StepTransition';
+import EstimateCompletion from './Components/EstimateCompletion';
+import { offlineEstimateService } from '../../Services/OfflineEstimateService';
+import { localPricingEngine } from '../../Services/LocalPricingEngine';
+import { CompletedEstimate } from '../../types';
 
 // Interface for the saved draft data
 interface EstimateDraft {
@@ -42,7 +43,19 @@ export default function Wizard({
   options,
   loadedEstimate,
 }) {
-  const { canGenerateEstimate, cacheEstimate, isOnline } = usePWA();
+  // Provide fallback data for offline use
+  const safeWindowTypes = windowTypes || [];
+  const safeExtras = extras || { extras: [] };
+  const safeFinishes = finishes || { finishes: [] };
+  const safeCompanyInfo = companyInfo || {};
+  const safeOptions = options || [
+    { id: 1, name: 'Option 1' },
+    { id: 2, name: 'Option 2' },
+    { id: 3, name: 'Option 3' },
+    { id: 4, name: 'Option 4' },
+    { id: 5, name: 'Option 5' }
+  ];
+
   const [currentStep, setCurrentStep] = useState(1);
   const [previousStep, setPreviousStep] = useState(1);
   const [transitionDirection, setTransitionDirection] = useState<
@@ -71,6 +84,8 @@ export default function Wizard({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [completedEstimate, setCompletedEstimate] = useState<CompletedEstimate | null>(null);
+  const [showCompletion, setShowCompletion] = useState(false);
 
   // Ref for debouncing saves
   const saveTimeoutRef = useRef<number | null>(null);
@@ -232,7 +247,7 @@ export default function Wizard({
     };
   }, []);
 
-  const updateFormData = (section, data) => {
+  const updateFormData = (section: string, data: any) => {
     setFormData(prevData => {
       const newData = {
         ...prevData,
@@ -263,7 +278,7 @@ export default function Wizard({
     });
   };
 
-  const addWindow = window => {
+  const addWindow = (window: any) => {
     // Ensure the window has an options field set
     const windowWithOptions = {
       ...window,
@@ -272,11 +287,11 @@ export default function Wizard({
 
     setFormData(prevData => ({
       ...prevData,
-      windows: [...prevData.windows, windowWithOptions],
+      windows: [...(prevData.windows || []), windowWithOptions],
     }));
   };
 
-  const updateWindow = (index, window) => {
+  const updateWindow = (index: number, window: any) => {
     // Ensure the window has an options field set
     const windowWithOptions = {
       ...window,
@@ -284,7 +299,7 @@ export default function Wizard({
     };
 
     setFormData(prevData => {
-      const updatedWindows = [...prevData.windows];
+      const updatedWindows = [...(prevData.windows || [])];
       updatedWindows[index] = windowWithOptions;
       return {
         ...prevData,
@@ -293,9 +308,9 @@ export default function Wizard({
     });
   };
 
-  const removeWindow = index => {
+  const removeWindow = (index: number) => {
     setFormData(prevData => {
-      const updatedWindows = [...prevData.windows];
+      const updatedWindows = [...(prevData.windows || [])];
       updatedWindows.splice(index, 1);
       return {
         ...prevData,
@@ -304,7 +319,7 @@ export default function Wizard({
     });
   };
 
-  const openModal = content => {
+  const openModal = (content: any) => {
     // Only open the modal if there's actual content to display
     if (content) {
       setModalContent(content);
@@ -321,7 +336,7 @@ export default function Wizard({
   };
 
   // Function to validate a specific step
-  const validateStep = (stepNumber, isValid) => {
+  const validateStep = (stepNumber: number, isValid: boolean) => {
     setStepValidation(prev => ({
       ...prev,
       [stepNumber]: isValid,
@@ -386,7 +401,7 @@ export default function Wizard({
   };
 
   // Custom function to handle direct step navigation from progress bar
-  const goToStep = stepNumber => {
+  const goToStep = (stepNumber: number) => {
     // Only allow navigation to steps that have been reached or previous steps
     if (stepNumber <= highestStepReached && stepNumber !== currentStep) {
       // Start transition
@@ -406,110 +421,117 @@ export default function Wizard({
     }
   };
 
-  const submitEstimate = () => {
-    // Check if we can generate PDF (online only)
-    if (!canGenerateEstimate) {
-      // Cache estimate for offline use
-      const estimateData = {
-        id: `offline-${Date.now()}`,
-        customerInfo: formData?.customer_details || {},
-        windows: formData?.windows || [],
-        selectedCaveats: formData?.selected_caveats || {},
-        timestamp: Date.now(),
-        synced: false
-      };
-
-      cacheEstimate(estimateData);
-
-      setNotification({
-        type: 'info',
-        message: 'Estimate saved offline. PDF will be generated when you\'re back online.',
-      });
-
-      // Clear the draft after saving offline
-      clearDraft();
-
-      setTimeout(() => {
-        setNotification(null);
-      }, 5000);
-
-      return;
-    }
-
+  const submitEstimate = async () => {
     setIsGenerating(true);
     setNotification({
       type: 'info',
-      message: 'Generating estimate, please wait...',
+      message: 'Creating estimate, please wait...',
     });
 
-    // Use axios for direct file download instead of Inertia
-    axios
-      .post(route('estimates.generate'), formData, {
-        responseType: 'blob', // Important for handling binary data
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document
-            .querySelector('meta[name="csrf-token"]')
-            .getAttribute('content'),
-        },
-      })
-      .then(response => {
-        setIsGenerating(false);
+    try {
+      // Initialize pricing engine with fallback data
+      await localPricingEngine.initialize();
 
-        // Create a download link and trigger it
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-
-        // Get filename from Content-Disposition header or use default
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = 'estimate.pdf';
-
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-          if (filenameMatch && filenameMatch.length === 2) {
-            filename = filenameMatch[1];
-          }
-        }
-
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Clear the draft after successful submission
-        clearDraft();
-
-        setNotification({
-          type: 'success',
-          message: 'Estimate downloaded successfully!',
-        });
-
-        // Clear notification after 3 seconds
-        setTimeout(() => {
-          setNotification(null);
-        }, 3000);
-      })
-      .catch(error => {
-        setIsGenerating(false);
-        console.error('Failed to generate estimate:', error);
-        setNotification({
-          type: 'error',
-          message: 'Failed to generate estimate. Please try again.',
-        });
-
-        // Clear notification after 3 seconds
-        setTimeout(() => {
-          setNotification(null);
-        }, 3000);
+      // Generate estimate using offline service
+      const estimate = await offlineEstimateService.generateEstimate({
+        customerInfo: formData?.customer_details || {},
+        windows: formData?.windows || [],
+        selectedCaveats: formData?.selected_caveats || {},
+        companyInfo: safeCompanyInfo,
       });
+
+      // Clear the draft after successful creation
+      clearDraft();
+
+      // Set completed estimate and show completion screen
+      setCompletedEstimate(estimate);
+      setShowCompletion(true);
+
+      setNotification({
+        type: 'success',
+        message: 'Estimate created successfully!',
+      });
+
+      // Clear notification after 3 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Failed to create estimate:', error);
+      setNotification({
+        type: 'error',
+        message: error.message || 'Failed to create estimate. Please try again.',
+      });
+
+      // Clear error notification after 5 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Navigation handlers for completion screen
+  const handleCreateNew = () => {
+    setShowCompletion(false);
+    setCompletedEstimate(null);
+    setCurrentStep(1);
+    setFormData({
+      customer_details: {
+        title: '',
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        address: '',
+        additional_info: '',
+      },
+      windows: [],
+      selected_caveats: {},
+    });
+  };
+
+  const handleViewAllEstimates = () => {
+    router.visit('/estimates');
+  };
+
+  // Step validation helper
+  const isStepValid = (step: number): boolean => {
+    switch (step) {
+      case 1:
+        return !!(
+          formData.customer_details.first_name &&
+          formData.customer_details.last_name &&
+          formData.customer_details.email &&
+          formData.customer_details.phone &&
+          formData.customer_details.address
+        );
+      case 2:
+        return formData.windows.length > 0;
+      case 3:
+        return formData.windows.every(window =>
+          window.type && window.room && window.quantity > 0
+        );
+      case 4:
+        return true; // Extras are optional
+      case 5:
+        return formData.windows.every(window =>
+          window.options && window.options.length > 0
+        );
+      case 6:
+        return true; // Review step
+      default:
+        return false;
+    }
   };
 
   const renderStep = () => {
     // Render both the current step and the previous step during transitions
     // This allows for smooth animations between steps
 
-    const renderStepContent = step => {
+    const renderStepContent = (step: number) => {
       switch (step) {
         case 1:
           return (
@@ -525,7 +547,7 @@ export default function Wizard({
           return (
             <WindowSelectionStep
               windows={formData?.windows || []}
-              windowTypes={windowTypes}
+              windowTypes={safeWindowTypes}
               addWindow={addWindow}
               updateWindow={updateWindow}
               removeWindow={removeWindow}
@@ -537,8 +559,8 @@ export default function Wizard({
           return (
             <WindowConfigStep
               windows={formData?.windows || []}
-              windowTypes={windowTypes}
-              finishes={finishes}
+              windowTypes={safeWindowTypes}
+              finishes={safeFinishes}
               updateWindow={updateWindow}
               currentWindow={currentWindow}
               setCurrentWindow={setCurrentWindow}
@@ -549,7 +571,7 @@ export default function Wizard({
           return (
             <ExtrasSelectionStep
               windows={formData?.windows || []}
-              extras={extras}
+              extras={safeExtras}
               updateWindow={updateWindow}
               currentWindow={currentWindow}
               setCurrentWindow={setCurrentWindow}
@@ -560,7 +582,7 @@ export default function Wizard({
           return (
             <OptionsSelectionStep
               windows={formData?.windows || []}
-              options={options}
+              options={safeOptions}
               updateWindow={updateWindow}
               currentWindow={currentWindow}
               setCurrentWindow={setCurrentWindow}
@@ -571,12 +593,12 @@ export default function Wizard({
           return (
             <ReviewStep
               formData={formData}
-              windowTypes={windowTypes}
-              extras={extras}
-              finishes={finishes}
-              companyInfo={companyInfo}
+              windowTypes={safeWindowTypes}
+              extras={safeExtras}
+              finishes={safeFinishes}
+              companyInfo={safeCompanyInfo}
               pdfTextConfig={pdfTextConfig}
-              options={options}
+              options={safeOptions}
               updateFormData={updateFormData}
               submitEstimate={submitEstimate}
             />
@@ -609,6 +631,20 @@ export default function Wizard({
       </div>
     );
   };
+
+  // Show completion screen if estimate is completed
+  if (showCompletion && completedEstimate) {
+    return (
+      <>
+        <Head title='Estimate Completed' />
+        <EstimateCompletion
+          estimate={completedEstimate}
+          onCreateNew={handleCreateNew}
+          onViewAllEstimates={handleViewAllEstimates}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -671,11 +707,35 @@ export default function Wizard({
 
       <div className='py-12'>
         <div className='max-w-7xl mx-auto sm:px-6 lg:px-8'>
-          {/* Offline Status */}
-          <OfflineStatus className='mb-6' />
-
           <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
             <div className='p-6 text-gray-900'>
+              {/* Breadcrumb Navigation */}
+              <nav className="flex mb-6" aria-label="Breadcrumb">
+                <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                  <li className="inline-flex items-center">
+                    <Link
+                      href="/"
+                      className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                      </svg>
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li aria-current="page">
+                    <div className="flex items-center">
+                      <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">
+                        Create Estimate
+                      </span>
+                    </div>
+                  </li>
+                </ol>
+              </nav>
+
               <div className='flex justify-between items-center mb-6'>
                 <div>
                   <h1 className='text-2xl font-semibold'>
@@ -720,12 +780,20 @@ export default function Wizard({
                     </div>
                   )}
                 </div>
-                <Link
-                  href={route('estimates.index')}
-                  className='px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300'
-                >
-                  Back to Estimates
-                </Link>
+                <div className="flex space-x-3">
+                  <Link
+                    href="/"
+                    className='px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700'
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href={route('estimates.index')}
+                    className='px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300'
+                  >
+                    All Estimates
+                  </Link>
+                </div>
               </div>
 
               <WizardProgress

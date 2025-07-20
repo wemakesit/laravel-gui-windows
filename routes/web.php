@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\EstimateCreateController;
+use App\Http\Controllers\OfflineEstimateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SettingsController;
 
@@ -12,8 +13,9 @@ Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 // Legacy dashboard route for compatibility
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.legacy');
 
-// Estimate Routes
-Route::get('/estimates', [EstimateController::class, 'index'])->name('estimates.index');
+// Estimate Routes - Offline estimates take priority
+Route::get('/estimates', [OfflineEstimateController::class, 'index'])->name('estimates.index');
+Route::get('/estimates/view/{estimateId}', [OfflineEstimateController::class, 'show'])->name('estimates.offline.show');
 
 // Estimate Creation Routes - these need to be before the {estimate} routes to avoid conflicts
 Route::get('/estimates/create', [EstimateCreateController::class, 'index'])->name('estimates.create');

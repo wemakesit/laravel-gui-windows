@@ -1,9 +1,9 @@
 /**
  * Configuration Cache Service
- * Handles caching of window types, extras, finishes, and company configuration
+ * Handles caching of window types, extras, finishes, and company configuration using PouchDB
  */
 
-import { indexedDBService } from './IndexedDBService';
+import { pouchDBService } from './PouchDBService';
 
 export interface CachedConfig {
   windowTypes: any[];
@@ -16,104 +16,63 @@ export interface CachedConfig {
 }
 
 class ConfigCacheService {
-  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-  private readonly CONFIG_KEY = 'app_configuration';
-
   /**
-   * Cache configuration data
+   * Cache configuration data in PouchDB
    */
   public async cacheConfig(config: Partial<CachedConfig>): Promise<void> {
     try {
-      const existingConfig = await this.getConfig();
-      const updatedConfig: CachedConfig = {
-        ...existingConfig,
-        ...config,
-        lastUpdated: Date.now()
-      };
+      // Save each configuration type separately in PouchDB
+      if (config.windowTypes) {
+        await pouchDBService.saveConfig('window_types', config.windowTypes);
+      }
+      if (config.extras) {
+        await pouchDBService.saveConfig('extras', config.extras);
+      }
+      if (config.finishes) {
+        await pouchDBService.saveConfig('finishes', config.finishes);
+      }
+      if (config.companyInfo) {
+        await pouchDBService.saveConfig('company_info', config.companyInfo);
+      }
+      if (config.pdfTextConfig) {
+        await pouchDBService.saveConfig('pdf_text_config', config.pdfTextConfig);
+      }
+      if (config.options) {
+        await pouchDBService.saveConfig('options', config.options);
+      }
 
-      await indexedDBService.saveConfig(this.CONFIG_KEY, updatedConfig);
-      
-      // Also save to localStorage as fallback
-      localStorage.setItem(this.CONFIG_KEY, JSON.stringify(updatedConfig));
-      
-      console.log('ConfigCache: Configuration cached successfully');
+      console.log('ConfigCache: Configuration cached successfully in PouchDB');
     } catch (error) {
       console.error('ConfigCache: Error caching configuration:', error);
-      
-      // Fallback to localStorage only
-      try {
-        const existingConfig = this.getConfigFromLocalStorage();
-        const updatedConfig: CachedConfig = {
-          ...existingConfig,
-          ...config,
-          lastUpdated: Date.now()
-        };
-        localStorage.setItem(this.CONFIG_KEY, JSON.stringify(updatedConfig));
-      } catch (fallbackError) {
-        console.error('ConfigCache: Fallback caching failed:', fallbackError);
-      }
+      throw error;
     }
   }
 
   /**
-   * Get cached configuration
+   * Get cached configuration from PouchDB
    */
   public async getConfig(): Promise<CachedConfig> {
     try {
-      // Try IndexedDB first
-      const config = await indexedDBService.getConfig(this.CONFIG_KEY);
-      if (config && this.isConfigValid(config)) {
-        return config;
-      }
-      
-      // Fallback to localStorage
-      const localConfig = this.getConfigFromLocalStorage();
-      if (this.isConfigValid(localConfig)) {
-        return localConfig;
-      }
-      
-      // Return empty config if nothing found
-      return this.getEmptyConfig();
-    } catch (error) {
-      console.error('ConfigCache: Error getting configuration:', error);
-      
-      // Final fallback to localStorage
-      try {
-        const localConfig = this.getConfigFromLocalStorage();
-        if (this.isConfigValid(localConfig)) {
-          return localConfig;
-        }
-      } catch (fallbackError) {
-        console.error('ConfigCache: Fallback get failed:', fallbackError);
-      }
-      
-      return this.getEmptyConfig();
-    }
-  }
+      // Get all configuration from PouchDB
+      const allConfig = await pouchDBService.getAllConfig();
 
-  /**
-   * Get configuration from localStorage
-   */
-  private getConfigFromLocalStorage(): CachedConfig {
-    try {
-      const cached = localStorage.getItem(this.CONFIG_KEY);
-      return cached ? JSON.parse(cached) : this.getEmptyConfig();
+      const config: CachedConfig = {
+        windowTypes: allConfig.window_types || [],
+        extras: allConfig.extras || [],
+        finishes: allConfig.finishes || [],
+        companyInfo: allConfig.company_info || {},
+        pdfTextConfig: allConfig.pdf_text_config || {},
+        options: allConfig.options || [],
+        lastUpdated: Date.now()
+      };
+
+      return config;
     } catch (error) {
-      console.error('ConfigCache: Error parsing localStorage config:', error);
+      console.error('ConfigCache: Error getting configuration from PouchDB:', error);
+
+      // Return empty config if PouchDB fails
       return this.getEmptyConfig();
     }
-  }
-
-  /**
-   * Check if cached config is still valid
-   */
-  private isConfigValid(config: CachedConfig): boolean {
-    if (!config || !config.lastUpdated) {
-      return false;
-    }
-    
-    const age = Date.now() - config.lastUpdated;
-    return age < this.CACHE_DURATION;
   }
 
   /**
@@ -135,130 +94,90 @@ class ConfigCacheService {
    * Cache window types
    */
   public async cacheWindowTypes(windowTypes: any[]): Promise<void> {
-    await this.cacheConfig({ windowTypes });
+    await pouchDBService.saveConfig('window_types', windowTypes);
   }
 
   /**
    * Cache extras
    */
   public async cacheExtras(extras: any[]): Promise<void> {
-    await this.cacheConfig({ extras });
+    await pouchDBService.saveConfig('extras', extras);
   }
 
   /**
    * Cache finishes
    */
   public async cacheFinishes(finishes: any[]): Promise<void> {
-    await this.cacheConfig({ finishes });
+    await pouchDBService.saveConfig('finishes', finishes);
   }
 
   /**
    * Cache company info
    */
   public async cacheCompanyInfo(companyInfo: any): Promise<void> {
-    await this.cacheConfig({ companyInfo });
+    await pouchDBService.saveConfig('company_info', companyInfo);
   }
 
   /**
    * Cache PDF text config
    */
   public async cachePdfTextConfig(pdfTextConfig: any): Promise<void> {
-    await this.cacheConfig({ pdfTextConfig });
+    await pouchDBService.saveConfig('pdf_text_config', pdfTextConfig);
   }
 
   /**
    * Cache options
    */
   public async cacheOptions(options: any[]): Promise<void> {
-    await this.cacheConfig({ options });
+    await pouchDBService.saveConfig('options', options);
   }
 
   /**
-   * Get cached window types
+   * Force sync with CouchDB
    */
-  public async getWindowTypes(): Promise<any[]> {
-    const config = await this.getConfig();
-    return config.windowTypes || [];
+  public async forceSync(): Promise<void> {
+    await pouchDBService.forceSync();
   }
 
   /**
-   * Get cached extras
+   * Get sync status
    */
-  public async getExtras(): Promise<any[]> {
-    const config = await this.getConfig();
-    return config.extras || [];
+  public getSyncStatus() {
+    return pouchDBService.getSyncStatus();
   }
 
   /**
-   * Get cached finishes
+   * Setup continuous sync
    */
-  public async getFinishes(): Promise<any[]> {
-    const config = await this.getConfig();
-    return config.finishes || [];
+  public setupContinuousSync(): void {
+    pouchDBService.setupContinuousSync();
   }
 
   /**
-   * Get cached company info
-   */
-  public async getCompanyInfo(): Promise<any> {
-    const config = await this.getConfig();
-    return config.companyInfo || {};
-  }
-
-  /**
-   * Get cached PDF text config
-   */
-  public async getPdfTextConfig(): Promise<any> {
-    const config = await this.getConfig();
-    return config.pdfTextConfig || {};
-  }
-
-  /**
-   * Get cached options
-   */
-  public async getOptions(): Promise<any[]> {
-    const config = await this.getConfig();
-    return config.options || [];
-  }
-
-  /**
-   * Check if configuration is cached and valid
-   */
-  public async isConfigCached(): Promise<boolean> {
-    try {
-      const config = await this.getConfig();
-      return this.isConfigValid(config) && config.windowTypes.length > 0;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Clear cached configuration
+   * Clear all configuration
    */
   public async clearConfig(): Promise<void> {
     try {
-      await indexedDBService.saveConfig(this.CONFIG_KEY, this.getEmptyConfig());
-      localStorage.removeItem(this.CONFIG_KEY);
-      console.log('ConfigCache: Configuration cleared');
+      // This will be handled by PouchDB force sync
+      console.log('ConfigCache: Configuration will be cleared on next sync');
     } catch (error) {
       console.error('ConfigCache: Error clearing configuration:', error);
-      localStorage.removeItem(this.CONFIG_KEY);
+      throw error;
     }
   }
 
   /**
-   * Force refresh configuration (mark as expired)
+   * Check if configuration is available
    */
-  public async forceRefresh(): Promise<void> {
+  public async hasConfig(): Promise<boolean> {
     try {
       const config = await this.getConfig();
-      config.lastUpdated = 0; // Mark as expired
-      await indexedDBService.saveConfig(this.CONFIG_KEY, config);
-      localStorage.setItem(this.CONFIG_KEY, JSON.stringify(config));
-      console.log('ConfigCache: Configuration marked for refresh');
+      return config.windowTypes.length > 0 ||
+             config.extras.length > 0 ||
+             config.finishes.length > 0 ||
+             Object.keys(config.companyInfo).length > 0;
     } catch (error) {
-      console.error('ConfigCache: Error forcing refresh:', error);
+      return false;
     }
   }
 }

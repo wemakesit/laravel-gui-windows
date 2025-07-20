@@ -12,7 +12,6 @@ export default function OfflineStatus({
 }: OfflineStatusProps) {
   const {
     isOnline,
-    isOffline,
     isSyncing,
     lastSync,
     syncEstimates,
@@ -67,40 +66,11 @@ export default function OfflineStatus({
 
   return (
     <div className={`${className}`}>
-      {/* Offline Banner */}
-      {isOffline && (
-        <div className='bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4'>
-          <div className='flex items-center'>
-            <div className='flex-shrink-0'>
-              <svg
-                className='h-5 w-5 text-yellow-400'
-                fill='currentColor'
-                viewBox='0 0 20 20'
-              >
-                <path
-                  fillRule='evenodd'
-                  d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
-                  clipRule='evenodd'
-                />
-              </svg>
-            </div>
-            <div className='ml-3 flex-1'>
-              <p className='text-sm text-yellow-700'>
-                <strong>You're offline.</strong> You can continue working on estimates, 
-                but PDF generation requires an internet connection.
-              </p>
-              {unsyncedCount > 0 && (
-                <p className='text-sm text-yellow-600 mt-1'>
-                  {unsyncedCount} estimate{unsyncedCount !== 1 ? 's' : ''} waiting to sync.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Offline Banner - Disabled for offline-first app */}
+      {/* The app is designed to work offline, so we don't show offline warnings */}
 
-      {/* Online Status with Sync Info */}
-      {isOnline && (unsyncedCount > 0 || showWhenOnline) && (
+      {/* Online Status with Sync Info - Only show when there are unsynced estimates */}
+      {isOnline && unsyncedCount > 0 && (
         <div className='bg-green-50 border-l-4 border-green-400 p-4 mb-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center'>
@@ -189,8 +159,8 @@ export default function OfflineStatus({
         </div>
       )}
 
-      {/* Sync Status Indicator (Small) */}
-      {isOnline && unsyncedCount === 0 && !showWhenOnline && (
+      {/* Sync Status Indicator (Small) - Only show when explicitly requested */}
+      {isOnline && unsyncedCount === 0 && showWhenOnline && (
         <div className='flex items-center text-xs text-gray-500 mb-2'>
           <div className='w-2 h-2 bg-green-400 rounded-full mr-2'></div>
           <span>Online • Last sync: {formatLastSync(lastSync)}</span>

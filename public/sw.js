@@ -12,8 +12,9 @@ const STATIC_ASSETS = [
   '/estimates',
   '/estimates/create',
   '/settings',
-  '/manifest.json',
-  // Add critical CSS and JS files - these will be populated by Vite
+  '/manifest.json'
+  // Note: In development, Vite serves assets dynamically
+  // In production, build process should populate this with actual asset paths
 ];
 
 // API endpoints to cache
@@ -76,12 +77,21 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
-  
+
+  // Skip Vite HMR and development server requests
+  if (url.pathname.includes('/@vite/') ||
+      url.pathname.includes('/@react-refresh') ||
+      url.searchParams.has('token') ||
+      url.protocol === 'ws:' ||
+      url.protocol === 'wss:') {
+    return;
+  }
+
   // Handle different types of requests
   if (url.hostname === 'fonts.bunny.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     // External font requests - cache first with fallback
@@ -89,11 +99,11 @@ self.addEventListener('fetch', event => {
   } else if (url.pathname.startsWith('/api-proxy/') || url.pathname.startsWith('/api/')) {
     // API requests - network first, cache fallback
     event.respondWith(handleApiRequest(request));
-  } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
-    // Static assets - cache first
+  } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|tsx|ts)$/)) {
+    // Static assets and modules - cache first for offline-first app
     event.respondWith(handleStaticAsset(request));
   } else {
-    // HTML pages - network first, cache fallback
+    // HTML pages - cache first for offline-first app
     event.respondWith(handlePageRequest(request));
   }
 });
@@ -196,51 +206,33 @@ async function handlePageRequest(request) {
   try {
     // Try network first
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       // Cache the page
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
       return networkResponse;
     }
-    
+
     // If network fails, try cache
     return await getCachedResponse(request, DYNAMIC_CACHE);
   } catch (error) {
     console.log('Service Worker: Network failed for page request, trying cache');
     const cachedResponse = await getCachedResponse(request, DYNAMIC_CACHE);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     // Return offline page if available, otherwise a basic offline response
     const offlineResponse = await getCachedResponse(new Request('/'), DYNAMIC_CACHE);
     if (offlineResponse) {
       return offlineResponse;
     }
 
-    // Return a basic offline page
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Offline - Window Estimate System</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            .offline { color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="offline">
-            <h1>You're Offline</h1>
-            <p>Please check your internet connection and try again.</p>
-            <button onclick="window.location.reload()">Retry</button>
-          </div>
-        </body>
-      </html>
-    `, {
+    // For offline-first app, don't show offline page - let the app handle it
+    // Return a minimal response that won't interfere with the app
+    return new Response('', {
       status: 200,
       statusText: 'OK',
       headers: { 'Content-Type': 'text/html' }

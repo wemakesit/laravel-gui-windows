@@ -134,3 +134,57 @@ export interface Quotation {
   created_at?: string;
   updated_at?: string;
 }
+
+// Offline Estimate Types
+export interface EstimateBreakdown {
+  subtotal: number;
+  vat: number;
+  vatRate: number;
+  total: number;
+  windowsTotal: number;
+  extrasTotal: number;
+  finishesTotal: number;
+  discountAmount?: number;
+  discountPercent?: number;
+}
+
+export interface WindowBreakdown {
+  id: string;
+  room: string;
+  type: string;
+  quantity: number;
+  basePrice: number;
+  extrasTotal: number;
+  finishesTotal: number;
+  lineTotal: number;
+  extras: Array<{
+    name: string;
+    cost: number;
+    quantity?: number;
+  }>;
+  finishes: Array<{
+    name: string;
+    cost: number;
+  }>;
+  options: number[];
+}
+
+export interface CompletedEstimate {
+  id: string;
+  referenceNumber: string;
+  customerDetails: CustomerDetails;
+  companyInfo: CompanyInfo;
+  windows: WindowBreakdown[];
+  selectedCaveats: Record<string, boolean>;
+  breakdown: EstimateBreakdown;
+  createdAt: Date;
+  lastModified: Date;
+  status: 'draft' | 'completed' | 'synced';
+  synced: boolean;
+  metadata: {
+    windowCount: number;
+    totalItems: number;
+    createdBy?: string;
+    deviceInfo?: string;
+  };
+}

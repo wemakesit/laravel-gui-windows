@@ -1,29 +1,48 @@
-# Window Estimate System
+# Laravel GUI Windows
 
-A Laravel application with Inertia.js and React for creating window estimates through a wizard-style GUI interface. This application allows users to create estimates with customer information, add windows, and generate downloadable PDF files.
+A comprehensive Laravel application with Inertia.js and React for window estimation with offline-first functionality and CouchDB synchronisation.
 
-## Features
+## 🚀 Features
 
-- Wizard-style GUI with modal-focused steps
-- Customer information management
-- Window specification and configuration
-- PDF estimate generation and download
-- Integration with external API for data processing
+### **Core Functionality**
+- **Offline-First Architecture**: Create and manage estimates without internet connection
+- **PouchDB/CouchDB Sync**: Bidirectional data synchronisation with conflict resolution
+- **Progressive Web App (PWA)**: Installable app with service worker caching
+- **Touch-Optimised Interface**: Designed for Surface Pro and tablet devices
+- **Real-Time Pricing**: Dynamic pricing engine with VAT calculations
 
-## Requirements
+### **Estimate Management**
+- **Wizard-Style Creation**: Step-by-step estimate building process
+- **Window Configuration**: Detailed window types, extras, and finishes
+- **Photo Capture**: Take photos of windows for estimates
+- **Tree View Management**: Hierarchical window organisation
+- **PDF Generation**: Professional estimate documents
 
-- PHP 8.1 or higher
-- Composer
-- Node.js (v16+) and npm
-- SQLite or other database system
-- External API running on port 8001
+### **Data & Sync**
+- **Force Sync**: Overwrite local data with CouchDB data
+- **Real-Time Status**: Monitor sync progress and connection status
+- **Configuration Management**: Window types, extras, finishes stored in CouchDB
+- **Offline Resilience**: Works completely offline with last synced data
 
-## Installation
+### **Advanced Features**
+- **Role-Based Permissions**: User access control
+- **Monday.com Integration**: CRM synchronisation
+- **Address Lookup**: Postcode-based address completion
+- **Multiple Options**: Create estimates with different window combinations
 
-### 1. Clone the repository
+## 📋 Requirements
 
+- **PHP**: 8.1 or higher
+- **Node.js**: 18 or higher
+- **Composer**: Latest version
+- **CouchDB**: 3.3 or higher (for data sync)
+- **Laravel**: 11.x
+
+## 🛠 Installation
+
+### **1. Clone Repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/wemakesit/laravel-gui-windows.git
 cd laravel-gui-windows
 ```
 
@@ -138,6 +157,70 @@ The implementation creates address suggestions based on the postcode data, allow
 
 Since Postcodes.io is a free service, there are no usage limits to worry about, making it ideal for development and production use.
 
+## 🗄️ CouchDB Setup (Optional)
+
+For full offline sync functionality, set up CouchDB:
+
+### **Using Docker**
+```bash
+# Run CouchDB container
+docker run -d --name couchdb-local \
+  -p 5984:5984 \
+  -e COUCHDB_USER=admin \
+  -e COUCHDB_PASSWORD=password \
+  -v couchdb-data:/opt/couchdb/data \
+  couchdb:3.3
+
+# Create databases
+curl -X PUT http://admin:password@localhost:5984/window_config
+curl -X PUT http://admin:password@localhost:5984/window_estimates
+```
+
+### **Environment Configuration**
+Add to your `.env` file:
+```env
+COUCHDB_CONFIG_URL=http://admin:password@localhost:5984/window_config
+COUCHDB_ESTIMATES_URL=http://admin:password@localhost:5984/window_estimates
+```
+
+## 📱 Offline Functionality
+
+### **Key Features**
+- **Works Offline**: Create estimates without internet connection
+- **PouchDB Storage**: Local database with CouchDB sync
+- **Auto-Sync**: Data syncs automatically when online
+- **Force Sync**: Manual sync from Settings → Data Sync tab
+- **Status Monitoring**: Real-time sync status display
+
+### **Data Management**
+- **Settings Page**: Configure window types, extras, finishes
+- **Force Sync**: Overwrite local data with CouchDB data
+- **View Cached Data**: See what's stored locally
+- **Sync Status**: Monitor connection and sync progress
+
+## 🏗 Architecture
+
+### **Frontend Stack**
+- **Laravel 11**: PHP framework
+- **Inertia.js**: SPA without API
+- **React 18**: UI library with TypeScript
+- **Tailwind CSS**: Utility-first styling
+- **Headless UI**: Accessible components
+
+### **Offline & Sync**
+- **PouchDB**: Local database storage
+- **CouchDB**: Remote database sync
+- **Service Worker**: Caching strategy
+- **PWA**: Progressive Web App features
+
+### **Key Services**
+- **PouchDBService**: Database operations and sync
+- **ConfigCacheService**: Configuration management
+- **OfflineEstimateService**: Offline estimate creation
+- **LocalPricingEngine**: Client-side pricing calculations
+- **PWAService**: Progressive Web App functionality
+
 ## License
 
+This project is proprietary software developed by WeMakesIt.
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

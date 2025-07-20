@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Estimate;
 use App\Services\ApiService;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -66,12 +65,12 @@ class EstimateController extends Controller
     {
         $file = $estimate->file;
 
-        if (!$file || !file_exists(storage_path('app/' . $file->path))) {
+        if (! $file || ! file_exists(storage_path('app/'.$file->path))) {
             abort(404, 'File not found');
         }
 
         return response()->download(
-            storage_path('app/' . $file->path),
+            storage_path('app/'.$file->path),
             $file->filename,
             ['Content-Type' => $file->mime_type]
         );
@@ -83,8 +82,8 @@ class EstimateController extends Controller
     public function destroy(Estimate $estimate): \Illuminate\Http\RedirectResponse
     {
         // Delete associated file if it exists
-        if ($estimate->file && file_exists(storage_path('app/' . $estimate->file->path))) {
-            unlink(storage_path('app/' . $estimate->file->path));
+        if ($estimate->file && file_exists(storage_path('app/'.$estimate->file->path))) {
+            unlink(storage_path('app/'.$estimate->file->path));
         }
 
         $estimate->delete();

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Response;
+use Tests\TestCase;
 
 class PWATest extends TestCase
 {
@@ -16,12 +16,12 @@ class PWATest extends TestCase
     public function test_manifest_is_accessible(): void
     {
         $response = $this->get('/manifest.json');
-        
+
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/json');
-        
+
         $manifest = $response->json();
-        
+
         $this->assertArrayHasKey('name', $manifest);
         $this->assertArrayHasKey('short_name', $manifest);
         $this->assertArrayHasKey('start_url', $manifest);
@@ -29,7 +29,7 @@ class PWATest extends TestCase
         $this->assertArrayHasKey('theme_color', $manifest);
         $this->assertArrayHasKey('background_color', $manifest);
         $this->assertArrayHasKey('icons', $manifest);
-        
+
         $this->assertEquals('Window Estimate System', $manifest['name']);
         $this->assertEquals('WindowEst', $manifest['short_name']);
         $this->assertEquals('standalone', $manifest['display']);
@@ -41,10 +41,10 @@ class PWATest extends TestCase
     public function test_service_worker_is_accessible(): void
     {
         $response = $this->get('/sw.js');
-        
+
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/javascript');
-        
+
         $content = $response->getContent();
         $this->assertStringContainsString('CACHE_NAME', $content);
         $this->assertStringContainsString('install', $content);
@@ -57,8 +57,8 @@ class PWATest extends TestCase
     public function test_pwa_icons_are_accessible(): void
     {
         $iconSizes = [
-            '16x16', '32x32', '60x60', '72x72', '76x76', 
-            '114x114', '120x120', '144x144', '152x152', '180x180'
+            '16x16', '32x32', '60x60', '72x72', '76x76',
+            '114x114', '120x120', '144x144', '152x152', '180x180',
         ];
 
         foreach ($iconSizes as $size) {
@@ -74,11 +74,11 @@ class PWATest extends TestCase
     public function test_pwa_meta_tags_are_present(): void
     {
         $response = $this->get('/');
-        
+
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check for PWA meta tags
         $this->assertStringContainsString('<meta name="theme-color" content="#2563eb">', $content);
         $this->assertStringContainsString('<meta name="apple-mobile-web-app-capable" content="yes">', $content);
@@ -86,10 +86,10 @@ class PWATest extends TestCase
         $this->assertStringContainsString('<meta name="apple-mobile-web-app-title" content="Window Estimate System">', $content);
         $this->assertStringContainsString('<meta name="mobile-web-app-capable" content="yes">', $content);
         $this->assertStringContainsString('<meta name="application-name" content="WindowEst">', $content);
-        
+
         // Check for manifest link
         $this->assertStringContainsString('<link rel="manifest" href="/manifest.json">', $content);
-        
+
         // Check for icon links
         $this->assertStringContainsString('rel="apple-touch-icon"', $content);
         $this->assertStringContainsString('rel="icon"', $content);
@@ -103,15 +103,15 @@ class PWATest extends TestCase
         // Test that the main page loads
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         // Test that the dashboard loads
         $response = $this->get('/dashboard');
         $response->assertStatus(200);
-        
+
         // Test that the estimates page loads
         $response = $this->get('/estimates');
         $response->assertStatus(200);
-        
+
         // Test that the settings page loads
         $response = $this->get('/settings');
         $response->assertStatus(200);
@@ -124,9 +124,9 @@ class PWATest extends TestCase
     {
         $response = $this->get('/estimates/create');
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check that the estimate creation form is present
         $this->assertStringContainsString('customer', $content);
         $this->assertStringContainsString('window', $content);
@@ -140,7 +140,7 @@ class PWATest extends TestCase
         // Test static assets have proper caching
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         // The main page should have cache control headers
         $this->assertNotNull($response->headers->get('Cache-Control'));
     }
@@ -152,12 +152,12 @@ class PWATest extends TestCase
     {
         // Test with invalid estimate data
         $response = $this->postJson('/estimates/generate', [
-            'invalid' => 'data'
+            'invalid' => 'data',
         ]);
-        
+
         // Should return a proper error response
         $this->assertContains($response->status(), [400, 422, 500]);
-        
+
         if ($response->status() === 422) {
             $response->assertJsonStructure(['errors']);
         }
@@ -181,10 +181,10 @@ class PWATest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         // Check that we don't have overly restrictive CSP that would break PWA
         $csp = $response->headers->get('Content-Security-Policy');
-        
+
         if ($csp) {
             // Ensure service workers are allowed
             $this->assertStringNotContainsString("worker-src 'none'", $csp);
@@ -198,9 +198,9 @@ class PWATest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check for proper viewport meta tag for mobile/tablet support
         $this->assertStringContainsString(
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
@@ -215,9 +215,9 @@ class PWATest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check for Surface Pro specific meta tags
         $this->assertStringContainsString('<meta name="msapplication-TileColor" content="#2563eb">', $content);
         $this->assertStringContainsString('<meta name="msapplication-tap-highlight" content="no">', $content);
@@ -230,9 +230,9 @@ class PWATest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check that touch-optimised CSS is loaded
         $this->assertStringContainsString('touch-optimised', $content);
     }
@@ -245,7 +245,7 @@ class PWATest extends TestCase
         // Test 404 page
         $response = $this->get('/non-existent-page');
         $response->assertStatus(404);
-        
+
         // Test that 404 page still has PWA functionality
         $content = $response->getContent();
         $this->assertStringContainsString('manifest', $content);
@@ -259,9 +259,9 @@ class PWATest extends TestCase
         // Test that the service worker includes offline fallbacks
         $response = $this->get('/sw.js');
         $response->assertStatus(200);
-        
+
         $content = $response->getContent();
-        
+
         // Check for offline handling
         $this->assertStringContainsString('offline', $content);
         $this->assertStringContainsString('cache', $content);

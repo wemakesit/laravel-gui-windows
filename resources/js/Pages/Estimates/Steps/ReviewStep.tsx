@@ -26,8 +26,8 @@ export default function ReviewStep({
   // Safety checks for required data
   if (!formData) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-500">Loading review data...</p>
+      <div className='p-6 text-center'>
+        <p className='text-gray-500'>Loading review data...</p>
       </div>
     );
   }
@@ -321,26 +321,38 @@ export default function ReviewStep({
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <p className='text-sm font-medium text-gray-500'>Company Name</p>
-              <p className='text-base text-gray-900'>{companyInfo.name || 'Not specified'}</p>
+              <p className='text-base text-gray-900'>
+                {companyInfo.name || 'Not specified'}
+              </p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Address</p>
               <p className='text-base text-gray-900'>
-                {companyInfo.address?.line1 || companyInfo.address || 'Not specified'}
+                {companyInfo.address?.line1 ||
+                  companyInfo.address ||
+                  'Not specified'}
                 {companyInfo.address?.line2 && `, ${companyInfo.address.line2}`}
               </p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Contact</p>
               <p className='text-base text-gray-900'>
-                {companyInfo.contact?.phone || companyInfo.phone || 'No phone'} | {companyInfo.contact?.email || companyInfo.email || 'No email'}
+                {companyInfo.contact?.phone || companyInfo.phone || 'No phone'}{' '}
+                |{' '}
+                {companyInfo.contact?.email || companyInfo.email || 'No email'}
               </p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Registration</p>
               <p className='text-base text-gray-900'>
-                Company No: {companyInfo.registration?.company_number || companyInfo.company_number || 'Not specified'} | VAT No:{' '}
-                {companyInfo.registration?.vat_number || companyInfo.vat_number || 'Not specified'}
+                Company No:{' '}
+                {companyInfo.registration?.company_number ||
+                  companyInfo.company_number ||
+                  'Not specified'}{' '}
+                | VAT No:{' '}
+                {companyInfo.registration?.vat_number ||
+                  companyInfo.vat_number ||
+                  'Not specified'}
               </p>
             </div>
           </div>

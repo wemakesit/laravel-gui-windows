@@ -16,12 +16,12 @@ export function usePWA() {
     };
 
     // Subscribe to online status changes
-    pwaService.onOnlineStatusChange((isOnline) => {
+    pwaService.onOnlineStatusChange(isOnline => {
       setStatus(prev => ({ ...prev, isOnline }));
     });
 
     // Subscribe to install availability changes
-    pwaService.onInstallAvailable((canInstall) => {
+    pwaService.onInstallAvailable(canInstall => {
       setStatus(prev => ({ ...prev, canInstall }));
     });
 
@@ -133,7 +133,7 @@ export function usePWA() {
     status,
     isInstalling,
     isSyncing,
-    
+
     // Actions
     installApp,
     cacheEstimate,
@@ -141,11 +141,11 @@ export function usePWA() {
     getCachedEstimates,
     clearCache,
     resetInstallPrompt,
-    
+
     // Utilities
     canGenerateEstimate,
     canUseOffline,
-    
+
     // Computed values
     isOnline: status.isOnline,
     isOffline: !status.isOnline,

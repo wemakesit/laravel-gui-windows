@@ -33,7 +33,7 @@ class MondayService {
    */
   public async initialize(config: MondayConfig): Promise<void> {
     this.config = config;
-    
+
     if (config.enabled) {
       try {
         await this.testConnection();
@@ -120,11 +120,12 @@ class MondayService {
     try {
       const allLeads = await this.getLeads(100);
       const term = searchTerm.toLowerCase();
-      
-      return allLeads.filter(lead => 
-        lead.name.toLowerCase().includes(term) ||
-        lead.email.toLowerCase().includes(term) ||
-        lead.phone.includes(term)
+
+      return allLeads.filter(
+        lead =>
+          lead.name.toLowerCase().includes(term) ||
+          lead.email.toLowerCase().includes(term) ||
+          lead.phone.includes(term)
       );
     } catch (error) {
       console.error('Monday.com: Search failed:', error);
@@ -135,7 +136,9 @@ class MondayService {
   /**
    * Create new lead in Monday.com
    */
-  public async createLead(leadData: Partial<MondayLead>): Promise<string | null> {
+  public async createLead(
+    leadData: Partial<MondayLead>
+  ): Promise<string | null> {
     if (!this.config?.enabled || !this.config?.boardId) {
       return null;
     }
@@ -155,12 +158,12 @@ class MondayService {
 
       const response = await this.makeGraphQLRequest(mutation);
       const itemId = response.data?.create_item?.id;
-      
+
       if (itemId) {
         console.log('Monday.com: Lead created successfully:', itemId);
         return itemId;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Monday.com: Failed to create lead:', error);
@@ -171,7 +174,10 @@ class MondayService {
   /**
    * Update lead status
    */
-  public async updateLeadStatus(leadId: string, status: string): Promise<boolean> {
+  public async updateLeadStatus(
+    leadId: string,
+    status: string
+  ): Promise<boolean> {
     if (!this.config?.enabled) {
       return false;
     }
@@ -203,9 +209,11 @@ class MondayService {
    */
   public generateGDPRReference(leadData: Partial<MondayLead>): string {
     const timestamp = Date.now();
-    const hash = this.simpleHash(leadData.email || leadData.phone || leadData.name || '');
+    const hash = this.simpleHash(
+      leadData.email || leadData.phone || leadData.name || ''
+    );
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    
+
     return `EST-${new Date().getFullYear()}-${hash}-${random}`;
   }
 
@@ -228,18 +236,22 @@ class MondayService {
 
     // Check for data minimization
     if (leadData.notes && leadData.notes.length > 500) {
-      recommendations.push('Consider reducing notes to essential information only');
+      recommendations.push(
+        'Consider reducing notes to essential information only'
+      );
     }
 
     // Check for purpose limitation
     if (!leadData.source) {
-      recommendations.push('Document the source and purpose of data collection');
+      recommendations.push(
+        'Document the source and purpose of data collection'
+      );
     }
 
     return {
       compliant: issues.length === 0,
       issues,
-      recommendations
+      recommendations,
     };
   }
 
@@ -255,18 +267,20 @@ class MondayService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': this.config.apiKey,
-        'API-Version': '2023-10'
+        Authorization: this.config.apiKey,
+        'API-Version': '2023-10',
       },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ query }),
     });
 
     if (!response.ok) {
-      throw new Error(`Monday.com API error: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Monday.com API error: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
-    
+
     if (data.errors) {
       throw new Error(`Monday.com GraphQL error: ${data.errors[0].message}`);
     }
@@ -293,7 +307,7 @@ class MondayService {
       source: getColumnValue('source'),
       notes: getColumnValue('notes'),
       createdAt: item.created_at,
-      updatedAt: item.updated_at
+      updatedAt: item.updated_at,
     };
   }
 
@@ -320,7 +334,7 @@ class MondayService {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36).substring(0, 4).toUpperCase();

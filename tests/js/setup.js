@@ -4,21 +4,23 @@
  */
 
 // Mock window.location
-delete window.location;
-window.location = {
-  href: 'http://localhost:8888',
-  origin: 'http://localhost:8888',
-  protocol: 'http:',
-  host: 'localhost:8888',
-  hostname: 'localhost',
-  port: '8888',
-  pathname: '/',
-  search: '',
-  hash: '',
-  assign: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-};
+Object.defineProperty(window, 'location', {
+  value: {
+    href: 'http://localhost:8888',
+    origin: 'http://localhost:8888',
+    protocol: 'http:',
+    host: 'localhost:8888',
+    hostname: 'localhost',
+    port: '8888',
+    pathname: '/',
+    search: '',
+    hash: '',
+    assign: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+  },
+  writable: true,
+});
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

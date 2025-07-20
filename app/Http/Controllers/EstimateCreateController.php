@@ -58,7 +58,7 @@ class EstimateCreateController extends Controller
             ]);
 
             // Generate a unique reference number
-            $referenceNumber = 'EST-' . date('Y') . '-' . str_pad(
+            $referenceNumber = 'EST-'.date('Y').'-'.str_pad(
                 Estimate::whereYear('created_at', date('Y'))->count() + 1,
                 4,
                 '0',
@@ -87,8 +87,8 @@ class EstimateCreateController extends Controller
 
             if ($pdfResponse && isset($pdfResponse['success']) && $pdfResponse['success']) {
                 // Save the PDF file
-                $filename = $referenceNumber . '.pdf';
-                $path = 'estimates/' . $filename;
+                $filename = $referenceNumber.'.pdf';
+                $path = 'estimates/'.$filename;
 
                 if (isset($pdfResponse['pdf_content'])) {
                     Storage::put($path, base64_decode($pdfResponse['pdf_content']));
@@ -119,7 +119,7 @@ class EstimateCreateController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred: ' . $e->getMessage(),
+                'message' => 'An error occurred: '.$e->getMessage(),
             ], 500);
         }
     }

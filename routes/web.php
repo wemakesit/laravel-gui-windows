@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\EstimateCreateController;
 use App\Http\Controllers\OfflineEstimateController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use Inertia\Inertia;
 

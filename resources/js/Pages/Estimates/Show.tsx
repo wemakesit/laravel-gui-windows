@@ -33,9 +33,7 @@ export default function Show({ estimate }: EstimateShowProps) {
                   <h1 className='text-3xl font-bold text-gray-900'>
                     {estimate.reference_number}
                   </h1>
-                  <p className='text-gray-600 mt-1'>
-                    Window Estimate Details
-                  </p>
+                  <p className='text-gray-600 mt-1'>Window Estimate Details</p>
                 </div>
                 <div className='flex space-x-2'>
                   <Link

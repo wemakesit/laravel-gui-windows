@@ -93,8 +93,8 @@ export function usePWA() {
   /**
    * Get cached estimates
    */
-  const getCachedEstimates = useCallback(() => {
-    return pwaService.getLocalEstimates();
+  const getCachedEstimates = useCallback(async () => {
+    return await pwaService.getLocalEstimates();
   }, []);
 
   /**

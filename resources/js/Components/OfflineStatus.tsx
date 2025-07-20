@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { usePWA } from '../Hooks/usePWA';
 
 interface OfflineStatusProps {
@@ -6,21 +6,36 @@ interface OfflineStatusProps {
   showWhenOnline?: boolean;
 }
 
-export default function OfflineStatus({ 
-  className = '', 
-  showWhenOnline = false 
+export default function OfflineStatus({
+  className = '',
+  showWhenOnline = false
 }: OfflineStatusProps) {
-  const { 
-    isOnline, 
-    isOffline, 
-    isSyncing, 
-    lastSync, 
+  const {
+    isOnline,
+    isOffline,
+    isSyncing,
+    lastSync,
     syncEstimates,
-    getCachedEstimates 
+    getCachedEstimates
   } = usePWA();
 
-  const cachedEstimates = getCachedEstimates();
-  const unsyncedCount = cachedEstimates.filter(e => !e.synced).length;
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
+
+  // Load cached estimates count
+  useEffect(() => {
+    const loadUnsyncedCount = async () => {
+      try {
+        const cachedEstimates = await getCachedEstimates();
+        const count = cachedEstimates.filter(e => !e.synced).length;
+        setUnsyncedCount(count);
+      } catch (error) {
+        console.error('Error loading unsynced count:', error);
+        setUnsyncedCount(0);
+      }
+    };
+
+    loadUnsyncedCount();
+  }, [getCachedEstimates, isOnline, isSyncing]);
 
   // Don't show when online unless explicitly requested
   if (isOnline && !showWhenOnline && unsyncedCount === 0) {

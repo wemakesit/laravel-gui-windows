@@ -23,8 +23,25 @@ export default function ReviewStep({
   updateFormData,
   submitEstimate,
 }: ReviewStepProps) {
+  // Safety checks for required data
+  if (!formData) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-gray-500">Loading review data...</p>
+      </div>
+    );
+  }
+
+  // Ensure required data structures exist
+  const safeFormData = {
+    customer_details: {},
+    windows: [],
+    selected_caveats: {},
+    ...formData,
+  };
+
   const [selectedCaveats, setSelectedCaveats] = useState(
-    formData.selected_caveats || {}
+    safeFormData.selected_caveats || {}
   );
 
   const handleCaveatToggle = (caveat: string) => {
@@ -48,7 +65,7 @@ export default function ReviewStep({
   };
 
   const calculateSubtotal = () => {
-    return formData.windows.reduce(
+    return safeFormData.windows.reduce(
       (total, window) => total + calculateWindowTotal(window),
       0
     );
@@ -86,38 +103,38 @@ export default function ReviewStep({
           <div>
             <p className='text-sm font-medium text-gray-500'>Name</p>
             <p className='text-base text-gray-900'>
-              {formData.customer_details.title
-                ? `${formData.customer_details.title} `
+              {safeFormData.customer_details.title
+                ? `${safeFormData.customer_details.title} `
                 : ''}
-              {formData.customer_details.first_name}{' '}
-              {formData.customer_details.last_name}
+              {safeFormData.customer_details.first_name}{' '}
+              {safeFormData.customer_details.last_name}
             </p>
           </div>
           <div>
             <p className='text-sm font-medium text-gray-500'>Email</p>
             <p className='text-base text-gray-900'>
-              {formData.customer_details.email}
+              {safeFormData.customer_details.email || 'Not provided'}
             </p>
           </div>
           <div>
             <p className='text-sm font-medium text-gray-500'>Phone</p>
             <p className='text-base text-gray-900'>
-              {formData.customer_details.phone}
+              {safeFormData.customer_details.phone || 'Not provided'}
             </p>
           </div>
           <div className='md:col-span-2'>
             <p className='text-sm font-medium text-gray-500'>Address</p>
             <p className='text-base text-gray-900'>
-              {formData.customer_details.address}
+              {safeFormData.customer_details.address || 'Not provided'}
             </p>
           </div>
-          {formData.customer_details.additional_info && (
+          {safeFormData.customer_details.additional_info && (
             <div className='md:col-span-2'>
               <p className='text-sm font-medium text-gray-500'>
                 Additional Information
               </p>
               <p className='text-base text-gray-900'>
-                {formData.customer_details.additional_info}
+                {safeFormData.customer_details.additional_info}
               </p>
             </div>
           )}
@@ -127,9 +144,9 @@ export default function ReviewStep({
       <div className='bg-gray-50 p-6 rounded-lg'>
         <h3 className='text-lg font-medium text-gray-900 mb-4'>Windows</h3>
 
-        {formData.windows.length > 0 ? (
+        {safeFormData.windows.length > 0 ? (
           <div className='space-y-6'>
-            {formData.windows.map((window, index) => (
+            {safeFormData.windows.map((window, index) => (
               <div
                 key={index}
                 className='border border-gray-200 rounded-md p-4'
@@ -304,25 +321,26 @@ export default function ReviewStep({
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <p className='text-sm font-medium text-gray-500'>Company Name</p>
-              <p className='text-base text-gray-900'>{companyInfo.name}</p>
+              <p className='text-base text-gray-900'>{companyInfo.name || 'Not specified'}</p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Address</p>
               <p className='text-base text-gray-900'>
-                {companyInfo.address.line1}, {companyInfo.address.line2}
+                {companyInfo.address?.line1 || companyInfo.address || 'Not specified'}
+                {companyInfo.address?.line2 && `, ${companyInfo.address.line2}`}
               </p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Contact</p>
               <p className='text-base text-gray-900'>
-                {companyInfo.contact.phone} | {companyInfo.contact.email}
+                {companyInfo.contact?.phone || companyInfo.phone || 'No phone'} | {companyInfo.contact?.email || companyInfo.email || 'No email'}
               </p>
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500'>Registration</p>
               <p className='text-base text-gray-900'>
-                Company No: {companyInfo.registration.company_number} | VAT No:{' '}
-                {companyInfo.registration.vat_number}
+                Company No: {companyInfo.registration?.company_number || companyInfo.company_number || 'Not specified'} | VAT No:{' '}
+                {companyInfo.registration?.vat_number || companyInfo.vat_number || 'Not specified'}
               </p>
             </div>
           </div>

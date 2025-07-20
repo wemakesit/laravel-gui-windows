@@ -148,24 +148,38 @@ export default function CustomerInfoStep({
     >
   ) => {
     const { name, value } = e.target;
-    // Create the updated data
+
+    // Immediately update local state to prevent disappearing text
     const updatedData = { ...formData, [name]: value };
-    // Update local state
     setFormData(updatedData);
 
-    // Only update parent component if this is not an update from the parent
+    // Skip parent update if this is a parent-initiated update
     if (isParentUpdateRef.current) {
-      // Reset the ref for future user interactions
       isParentUpdateRef.current = false;
       return;
     }
 
-    // Only update parent component after state is set
-    // This prevents the infinite update loop
-    setTimeout(() => {
+    // Debounce parent updates to prevent excessive calls
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    updateTimeoutRef.current = setTimeout(() => {
       updateCustomerInfo(updatedData);
-    }, 0);
+    }, 300); // 300ms debounce
   };
+
+  // Add timeout ref for debouncing
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // State to store API configuration
 
@@ -188,44 +202,39 @@ export default function CustomerInfoStep({
   }, []);
 
   // Update local state when customerInfo changes (e.g., when a saved quotation is loaded)
+  // Only update if customerInfo has meaningful data and is different from current formData
   useEffect(() => {
-    // Skip if customerInfo is empty
     if (customerInfo && Object.keys(customerInfo).length > 0) {
-      // Create a normalized copy of customerInfo with title defaulted to empty string if undefined
+      // Create a normalized copy of customerInfo
       const normalizedCustomerInfo = {
+        title: '',
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        address: '',
+        additional_info: '',
         ...customerInfo,
-        title: customerInfo.title || '',
       };
 
-      // Create a normalized copy of formData with title defaulted to empty string if undefined
-      const normalizedFormData = {
-        ...formData,
-        title: formData.title || '',
-      };
-
-      // Check if the normalized objects are different to prevent infinite loops
-      const customerInfoStr = JSON.stringify(normalizedCustomerInfo);
-      const formDataStr = JSON.stringify(normalizedFormData);
-
-      console.log('CustomerInfoStep: Comparing normalized data');
-      console.log(
-        'CustomerInfoStep: normalizedCustomerInfo.title =',
-        normalizedCustomerInfo.title
-      );
-      console.log(
-        'CustomerInfoStep: normalizedFormData.title =',
-        normalizedFormData.title
+      // Only update if there's a significant difference (not just empty vs undefined)
+      const hasSignificantData = Object.values(normalizedCustomerInfo).some(value =>
+        value && value.toString().trim().length > 0
       );
 
-      if (customerInfoStr !== formDataStr) {
-        console.log(
-          'CustomerInfoStep: Updating formData from customerInfo prop'
-        );
+      // Check if current formData is empty or significantly different
+      const currentHasData = Object.values(formData).some(value =>
+        value && value.toString().trim().length > 0
+      );
+
+      // Only update if customerInfo has data and current form is empty, or if it's a load operation
+      if (hasSignificantData && (!currentHasData || JSON.stringify(customerInfo) !== JSON.stringify(formData))) {
+        console.log('CustomerInfoStep: Loading customer data from parent');
         isParentUpdateRef.current = true;
         setFormData(normalizedCustomerInfo);
       }
     }
-  }, [customerInfo, formData]);
+  }, [customerInfo]); // Remove formData dependency to prevent loops
 
   const lookupPostcode = async () => {
     if (!postcode.trim()) {

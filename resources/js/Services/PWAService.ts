@@ -2,6 +2,8 @@
  * PWA Service for managing offline functionality, service worker, and app installation
  */
 
+import { indexedDBService, EstimateRecord } from './IndexedDBService';
+
 export interface PWAStatus {
   isOnline: boolean;
   isInstalled: boolean;
@@ -15,6 +17,7 @@ export interface EstimateData {
   customerInfo: any;
   windows: any[];
   selectedCaveats: any;
+  companyInfo?: any;
   timestamp: number;
   synced: boolean;
 }
@@ -161,33 +164,80 @@ class PWAService {
    * Cache estimate data for offline use
    */
   public async cacheEstimate(estimateData: EstimateData): Promise<void> {
-    if (!this.serviceWorker) {
-      console.warn('PWA: Service Worker not ready, cannot cache estimate');
-      return;
-    }
-
     try {
-      // Send message to service worker to cache the estimate
-      this.serviceWorker.postMessage({
-        type: 'CACHE_ESTIMATE',
-        data: estimateData
-      });
+      const estimateRecord: EstimateRecord = {
+        id: estimateData.id || `offline-${Date.now()}`,
+        customerInfo: estimateData.customerInfo,
+        windows: estimateData.windows,
+        selectedCaveats: estimateData.selectedCaveats,
+        companyInfo: estimateData.companyInfo || {},
+        timestamp: estimateData.timestamp,
+        synced: estimateData.synced,
+        lastModified: Date.now(),
+        status: estimateData.synced ? 'synced' : 'draft'
+      };
 
-      // Also store in localStorage as fallback
+      await indexedDBService.saveEstimate(estimateRecord);
+
+      // Also store in localStorage as fallback for older browsers
+      const estimates = this.getLocalEstimates();
+      const existingIndex = estimates.findIndex(e => e.id === estimateData.id);
+      if (existingIndex >= 0) {
+        estimates[existingIndex] = estimateData;
+      } else {
+        estimates.push(estimateData);
+      }
+      localStorage.setItem('cached_estimates', JSON.stringify(estimates));
+
+      console.log('PWA: Estimate cached successfully in IndexedDB and localStorage');
+    } catch (error) {
+      console.error('PWA: Error caching estimate:', error);
+      // Fallback to localStorage only
       const estimates = this.getLocalEstimates();
       estimates.push(estimateData);
       localStorage.setItem('cached_estimates', JSON.stringify(estimates));
-      
-      console.log('PWA: Estimate cached successfully');
-    } catch (error) {
-      console.error('PWA: Error caching estimate:', error);
     }
   }
 
   /**
-   * Get cached estimates from local storage
+   * Get cached estimates from IndexedDB and localStorage
    */
-  public getLocalEstimates(): EstimateData[] {
+  public async getLocalEstimates(): Promise<EstimateData[]> {
+    try {
+      // Try IndexedDB first
+      const indexedDBEstimates = await indexedDBService.getAllEstimates();
+      if (indexedDBEstimates.length > 0) {
+        return indexedDBEstimates.map(record => ({
+          id: record.id,
+          customerInfo: record.customerInfo,
+          windows: record.windows,
+          selectedCaveats: record.selectedCaveats,
+          companyInfo: record.companyInfo,
+          timestamp: record.timestamp,
+          synced: record.synced
+        }));
+      }
+
+      // Fallback to localStorage
+      const cached = localStorage.getItem('cached_estimates');
+      return cached ? JSON.parse(cached) : [];
+    } catch (error) {
+      console.error('PWA: Error getting local estimates:', error);
+      // Final fallback to localStorage
+      try {
+        const cached = localStorage.getItem('cached_estimates');
+        return cached ? JSON.parse(cached) : [];
+      } catch (fallbackError) {
+        console.error('PWA: Error with localStorage fallback:', fallbackError);
+        return [];
+      }
+    }
+  }
+
+  /**
+   * Get cached estimates from local storage (synchronous fallback)
+   */
+  public getLocalEstimatesSync(): EstimateData[] {
     try {
       const cached = localStorage.getItem('cached_estimates');
       return cached ? JSON.parse(cached) : [];
@@ -206,49 +256,58 @@ class PWAService {
       return;
     }
 
-    const estimates = this.getLocalEstimates();
-    const unsyncedEstimates = estimates.filter(e => !e.synced);
+    try {
+      // Get unsynced estimates from IndexedDB
+      const unsyncedEstimates = await indexedDBService.getUnsyncedEstimates();
 
-    if (unsyncedEstimates.length === 0) {
-      console.log('PWA: No estimates to sync');
-      return;
-    }
-
-    console.log(`PWA: Syncing ${unsyncedEstimates.length} estimates`);
-
-    for (const estimate of unsyncedEstimates) {
-      try {
-        const response = await fetch('/estimates/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': this.getCSRFToken()
-          },
-          body: JSON.stringify(estimate)
-        });
-
-        if (response.ok) {
-          // Mark as synced
-          estimate.synced = true;
-          this.updateLocalEstimate(estimate);
-          console.log('PWA: Estimate synced successfully:', estimate.id);
+      if (unsyncedEstimates.length === 0) {
+        // Fallback to localStorage
+        const localEstimates = this.getLocalEstimatesSync();
+        const unsyncedLocal = localEstimates.filter(e => !e.synced);
+        if (unsyncedLocal.length === 0) {
+          console.log('PWA: No estimates to sync');
+          return;
         }
-      } catch (error) {
-        console.error('PWA: Error syncing estimate:', error);
       }
-    }
 
-    // Update last sync time
-    localStorage.setItem('last_sync', new Date().toISOString());
+      console.log(`PWA: Syncing ${unsyncedEstimates.length} estimates`);
+
+      for (const estimate of unsyncedEstimates) {
+        try {
+          const response = await fetch('/estimates/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': this.getCSRFToken()
+            },
+            body: JSON.stringify(estimate)
+          });
+
+          if (response.ok) {
+            // Mark as synced
+            estimate.synced = true;
+            this.updateLocalEstimate(estimate);
+            console.log('PWA: Estimate synced successfully:', estimate.id);
+          }
+        } catch (error) {
+          console.error('PWA: Error syncing estimate:', error);
+        }
+      }
+
+      // Update last sync time
+      localStorage.setItem('last_sync', new Date().toISOString());
+    } catch (error) {
+      console.error('PWA: Error in syncEstimates:', error);
+    }
   }
 
   /**
    * Update local estimate
    */
   private updateLocalEstimate(updatedEstimate: EstimateData): void {
-    const estimates = this.getLocalEstimates();
+    const estimates = this.getLocalEstimatesSync();
     const index = estimates.findIndex(e => e.id === updatedEstimate.id);
-    
+
     if (index !== -1) {
       estimates[index] = updatedEstimate;
       localStorage.setItem('cached_estimates', JSON.stringify(estimates));

@@ -83,7 +83,10 @@ self.addEventListener('fetch', event => {
   }
   
   // Handle different types of requests
-  if (url.pathname.startsWith('/api-proxy/') || url.pathname.startsWith('/api/')) {
+  if (url.hostname === 'fonts.bunny.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    // External font requests - cache first with fallback
+    event.respondWith(handleFontRequest(request));
+  } else if (url.pathname.startsWith('/api-proxy/') || url.pathname.startsWith('/api/')) {
     // API requests - network first, cache fallback
     event.respondWith(handleApiRequest(request));
   } else if (url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2)$/)) {
@@ -94,6 +97,47 @@ self.addEventListener('fetch', event => {
     event.respondWith(handlePageRequest(request));
   }
 });
+
+// Handle font requests with cache-first strategy and fallback
+async function handleFontRequest(request) {
+  try {
+    // Try cache first
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Try network
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      // Cache successful font responses
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+
+    // Return fallback CSS for fonts
+    return new Response('/* Font loading failed - using system fonts */', {
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        'Content-Type': 'text/css',
+        'Cache-Control': 'max-age=86400'
+      }
+    });
+  } catch (error) {
+    console.warn('Font request failed:', error);
+    // Return fallback CSS
+    return new Response('/* Font loading failed - using system fonts */', {
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        'Content-Type': 'text/css',
+        'Cache-Control': 'max-age=86400'
+      }
+    });
+  }
+}
 
 // Handle API requests with network-first strategy
 async function handleApiRequest(request) {
@@ -138,8 +182,12 @@ async function handleStaticAsset(request) {
     return networkResponse;
   } catch (error) {
     console.error('Service Worker: Error handling static asset:', error);
-    // Return a fallback response or let it fail
-    throw error;
+    // Return a proper Response object instead of throwing
+    return new Response('Asset not available', {
+      status: 404,
+      statusText: 'Not Found',
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }
 
@@ -166,8 +214,37 @@ async function handlePageRequest(request) {
       return cachedResponse;
     }
     
-    // Return offline page if available
-    return await getCachedResponse(new Request('/'), DYNAMIC_CACHE);
+    // Return offline page if available, otherwise a basic offline response
+    const offlineResponse = await getCachedResponse(new Request('/'), DYNAMIC_CACHE);
+    if (offlineResponse) {
+      return offlineResponse;
+    }
+
+    // Return a basic offline page
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Offline - Window Estimate System</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .offline { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="offline">
+            <h1>You're Offline</h1>
+            <p>Please check your internet connection and try again.</p>
+            <button onclick="window.location.reload()">Retry</button>
+          </div>
+        </body>
+      </html>
+    `, {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'text/html' }
+    });
   }
 }
 
@@ -189,45 +266,142 @@ self.addEventListener('sync', event => {
 // Sync estimates when connectivity returns
 async function syncEstimates() {
   console.log('Service Worker: Syncing estimates...');
-  
+
   try {
     // Get pending estimates from IndexedDB
     const pendingEstimates = await getPendingEstimates();
-    
+
+    if (pendingEstimates.length === 0) {
+      console.log('Service Worker: No estimates to sync');
+      return;
+    }
+
+    let syncedCount = 0;
+    let failedCount = 0;
+
     for (const estimate of pendingEstimates) {
       try {
         const response = await fetch('/estimates/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': await getCSRFToken()
+            'X-CSRF-TOKEN': await getCSRFToken(),
+            'Accept': 'application/json'
           },
-          body: JSON.stringify(estimate.data)
+          body: JSON.stringify({
+            customerInfo: estimate.customerInfo,
+            windows: estimate.windows,
+            selectedCaveats: estimate.selectedCaveats,
+            companyInfo: estimate.companyInfo
+          })
         });
-        
+
         if (response.ok) {
+          const result = await response.json();
           // Mark estimate as synced
-          await markEstimateAsSynced(estimate.id);
+          await markEstimateAsSynced(estimate.id, result);
+          syncedCount++;
           console.log('Service Worker: Estimate synced successfully:', estimate.id);
+        } else {
+          failedCount++;
+          console.error('Service Worker: Failed to sync estimate:', estimate.id, response.status);
         }
       } catch (error) {
-        console.error('Service Worker: Error syncing estimate:', error);
+        failedCount++;
+        console.error('Service Worker: Error syncing estimate:', estimate.id, error);
       }
     }
+
+    // Notify main thread about sync results
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'SYNC_COMPLETE',
+        data: {
+          synced: syncedCount,
+          failed: failedCount,
+          total: pendingEstimates.length
+        }
+      });
+    });
+
   } catch (error) {
     console.error('Service Worker: Error in syncEstimates:', error);
   }
 }
 
-// Helper functions for IndexedDB operations (to be implemented)
+// Helper functions for IndexedDB operations
 async function getPendingEstimates() {
-  // This will be implemented when we add IndexedDB
-  return [];
+  try {
+    const db = await openIndexedDB();
+    const transaction = db.transaction(['estimates'], 'readonly');
+    const store = transaction.objectStore('estimates');
+    const index = store.index('synced');
+
+    return new Promise((resolve, reject) => {
+      const request = index.getAll(false);
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Service Worker: Error getting pending estimates:', error);
+    return [];
+  }
 }
 
-async function markEstimateAsSynced(estimateId) {
-  // This will be implemented when we add IndexedDB
-  console.log('Marking estimate as synced:', estimateId);
+async function markEstimateAsSynced(estimateId, syncResult) {
+  try {
+    const db = await openIndexedDB();
+    const transaction = db.transaction(['estimates'], 'readwrite');
+    const store = transaction.objectStore('estimates');
+
+    // Get the estimate first
+    const getRequest = store.get(estimateId);
+
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        const estimate = getRequest.result;
+        if (estimate) {
+          estimate.synced = true;
+          estimate.syncResult = syncResult;
+          estimate.syncedAt = Date.now();
+
+          const putRequest = store.put(estimate);
+          putRequest.onsuccess = () => {
+            console.log('Service Worker: Estimate marked as synced:', estimateId);
+            resolve();
+          };
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          resolve(); // Estimate not found, consider it handled
+        }
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  } catch (error) {
+    console.error('Service Worker: Error marking estimate as synced:', error);
+  }
+}
+
+async function openIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('WindowEstimateDB', 1);
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+
+      // Create estimates store if it doesn't exist
+      if (!db.objectStoreNames.contains('estimates')) {
+        const estimatesStore = db.createObjectStore('estimates', { keyPath: 'id' });
+        estimatesStore.createIndex('timestamp', 'timestamp', { unique: false });
+        estimatesStore.createIndex('synced', 'synced', { unique: false });
+        estimatesStore.createIndex('status', 'status', { unique: false });
+      }
+    };
+  });
 }
 
 async function getCSRFToken() {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
 import { usePWA } from '../../Hooks/usePWA';
@@ -71,6 +71,9 @@ export default function Wizard({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Ref for debouncing saves
+  const saveTimeoutRef = useRef<number | null>(null);
 
   // Track the highest step the user has reached
   const [highestStepReached, setHighestStepReached] = useState(1);
@@ -220,11 +223,44 @@ export default function Wizard({
     }
   }, [formData, currentStep, highestStepReached, isLoaded, isGenerating]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const updateFormData = (section, data) => {
-    setFormData(prevData => ({
-      ...prevData,
-      [section]: data,
-    }));
+    setFormData(prevData => {
+      const newData = {
+        ...prevData,
+        [section]: data,
+      };
+
+      // Debounced save to localStorage for offline persistence
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = window.setTimeout(() => {
+        try {
+          localStorage.setItem('estimate_draft', JSON.stringify({
+            ...newData,
+            timestamp: Date.now(),
+            currentStep,
+            highestStepReached,
+            stepValidation
+          }));
+          console.log('Draft saved:', section);
+        } catch (error) {
+          console.error('Failed to save draft:', error);
+        }
+      }, 500); // 500ms debounce
+
+      return newData;
+    });
   };
 
   const addWindow = window => {
@@ -376,9 +412,9 @@ export default function Wizard({
       // Cache estimate for offline use
       const estimateData = {
         id: `offline-${Date.now()}`,
-        customerInfo: formData.customer_details,
-        windows: formData.windows,
-        selectedCaveats: formData.selected_caveats,
+        customerInfo: formData?.customer_details || {},
+        windows: formData?.windows || [],
+        selectedCaveats: formData?.selected_caveats || {},
         timestamp: Date.now(),
         synced: false
       };
@@ -478,7 +514,7 @@ export default function Wizard({
         case 1:
           return (
             <CustomerInfoStep
-              customerInfo={formData.customer_details}
+              customerInfo={formData?.customer_details || {}}
               updateCustomerInfo={data =>
                 updateFormData('customer_details', data)
               }
@@ -488,7 +524,7 @@ export default function Wizard({
         case 2:
           return (
             <WindowSelectionStep
-              windows={formData.windows}
+              windows={formData?.windows || []}
               windowTypes={windowTypes}
               addWindow={addWindow}
               updateWindow={updateWindow}
@@ -500,7 +536,7 @@ export default function Wizard({
         case 3:
           return (
             <WindowConfigStep
-              windows={formData.windows}
+              windows={formData?.windows || []}
               windowTypes={windowTypes}
               finishes={finishes}
               updateWindow={updateWindow}
@@ -512,7 +548,7 @@ export default function Wizard({
         case 4:
           return (
             <ExtrasSelectionStep
-              windows={formData.windows}
+              windows={formData?.windows || []}
               extras={extras}
               updateWindow={updateWindow}
               currentWindow={currentWindow}
@@ -523,7 +559,7 @@ export default function Wizard({
         case 5:
           return (
             <OptionsSelectionStep
-              windows={formData.windows}
+              windows={formData?.windows || []}
               options={options}
               updateWindow={updateWindow}
               currentWindow={currentWindow}

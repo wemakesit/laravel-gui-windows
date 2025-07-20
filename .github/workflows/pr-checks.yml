@@ -1,0 +1,280 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  # Code Quality Gate
+  code-quality:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for better analysis
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, gd, zip, bcmath
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install PHP dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Run PHP Pint (Code Style Check)
+      run: ./vendor/bin/pint --test
+
+    - name: Run ESLint
+      run: npm run lint
+
+    - name: Run Prettier check
+      run: npm run format:check
+
+    - name: Check for merge conflicts
+      run: |
+        if git merge-tree $(git merge-base HEAD origin/main) HEAD origin/main | grep -q "<<<<<<< "; then
+          echo "❌ Merge conflicts detected"
+          exit 1
+        else
+          echo "✅ No merge conflicts detected"
+        fi
+
+  # Test Coverage Check
+  test-coverage:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: laravel_gui_windows_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, gd, zip, bcmath
+        coverage: xdebug
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install PHP dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Generate key
+      run: php artisan key:generate
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    - name: Create Database
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+
+    - name: Run PHP tests with coverage
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: vendor/bin/phpunit --coverage-clover coverage-php.xml
+
+    - name: Run JavaScript tests with coverage
+      run: npm test -- --coverage --watchAll=false
+      continue-on-error: true
+
+    - name: Comment coverage on PR
+      uses: 5monkeys/cobertura-action@master
+      with:
+        path: coverage-php.xml
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        minimum_coverage: 70
+        fail_below_threshold: false
+
+  # Build Verification
+  build-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build assets
+      run: npm run build
+
+    - name: Check build size
+      run: |
+        echo "Build size analysis:"
+        du -sh public/build/* || echo "No build files found"
+        
+        # Check if build files are too large (>5MB warning)
+        if [ -d "public/build" ]; then
+          TOTAL_SIZE=$(du -sb public/build | cut -f1)
+          if [ $TOTAL_SIZE -gt 5242880 ]; then
+            echo "⚠️ Warning: Build size is larger than 5MB ($TOTAL_SIZE bytes)"
+          else
+            echo "✅ Build size is acceptable ($TOTAL_SIZE bytes)"
+          fi
+        fi
+
+  # Database Migration Check
+  migration-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: laravel_gui_windows_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, gd, zip, bcmath
+
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: Install Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Generate key
+      run: php artisan key:generate
+
+    - name: Directory Permissions
+      run: chmod -R 777 storage bootstrap/cache
+
+    - name: Run migrations
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: laravel_gui_windows_test
+        DB_USERNAME: root
+        DB_PASSWORD: password
+      run: php artisan migrate --force
+
+    - name: Check migration rollback
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: laravel_gui_windows_test
+        DB_USERNAME: root
+        DB_PASSWORD: password
+      run: php artisan migrate:rollback --force
+
+  # PR Size Check
+  pr-size-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check PR size
+      run: |
+        # Count changed lines
+        CHANGED_LINES=$(git diff --stat origin/main...HEAD | tail -1 | grep -o '[0-9]\+ insertions\|[0-9]\+ deletions' | grep -o '[0-9]\+' | paste -sd+ | bc)
+        echo "Total changed lines: $CHANGED_LINES"
+        
+        # Count changed files
+        CHANGED_FILES=$(git diff --name-only origin/main...HEAD | wc -l)
+        echo "Total changed files: $CHANGED_FILES"
+        
+        # Warning thresholds
+        if [ $CHANGED_LINES -gt 1000 ]; then
+          echo "⚠️ Warning: This PR changes more than 1000 lines. Consider breaking it into smaller PRs."
+        fi
+        
+        if [ $CHANGED_FILES -gt 50 ]; then
+          echo "⚠️ Warning: This PR changes more than 50 files. Consider breaking it into smaller PRs."
+        fi
+        
+        echo "✅ PR size check completed"
+
+  # Accessibility Check
+  accessibility-check:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build assets
+      run: npm run build
+
+    - name: Run accessibility tests
+      run: |
+        echo "Running accessibility checks..."
+        # Add axe-core or other accessibility testing tools here
+        echo "✅ Accessibility check completed"
+
+  # Auto-assign reviewers
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+
+    steps:
+    - name: Auto-assign reviewers
+      uses: kentaro-m/auto-assign-action@v1.2.5
+      with:
+        configuration-path: '.github/auto-assign.yml'

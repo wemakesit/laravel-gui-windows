@@ -44,31 +44,37 @@ class PWAService {
       try {
         console.log('PWA: Registering service worker...');
         const registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/'
+          scope: '/',
         });
-        console.log('PWA: Service Worker registered successfully:', registration);
-        
+        console.log(
+          'PWA: Service Worker registered successfully:',
+          registration
+        );
+
         // Wait for service worker to be ready
         const serviceWorker = await navigator.serviceWorker.ready;
         this.serviceWorker = serviceWorker.active;
-        
+
         // Listen for service worker updates
         registration.addEventListener('updatefound', () => {
           console.log('PWA: Service Worker update found');
           this.handleServiceWorkerUpdate(registration);
         });
-        
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
       }
     }
 
     // Listen for online/offline events
-    window.addEventListener('online', () => this.handleOnlineStatusChange(true));
-    window.addEventListener('offline', () => this.handleOnlineStatusChange(false));
+    window.addEventListener('online', () =>
+      this.handleOnlineStatusChange(true)
+    );
+    window.addEventListener('offline', () =>
+      this.handleOnlineStatusChange(false)
+    );
 
     // Listen for app install prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener('beforeinstallprompt', e => {
       console.log('PWA: beforeinstallprompt event fired');
       e.preventDefault();
       this.installPrompt = e;
@@ -93,7 +99,7 @@ class PWAService {
       isInstalled: this.isAppInstalled(),
       canInstall: this.installPrompt !== null,
       serviceWorkerReady: this.serviceWorker !== null,
-      lastSync: this.getLastSyncTime()
+      lastSync: this.getLastSyncTime(),
     };
   }
 
@@ -102,13 +108,17 @@ class PWAService {
    */
   private isAppInstalled(): boolean {
     // Check if running in standalone mode (PWA installed)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isStandalone = window.matchMedia(
+      '(display-mode: standalone)'
+    ).matches;
 
     // Check iOS standalone mode
     const isIOSStandalone = (window.navigator as any).standalone === true;
 
     // Check if launched from home screen (Android)
-    const isAndroidStandalone = window.matchMedia('(display-mode: minimal-ui)').matches;
+    const isAndroidStandalone = window.matchMedia(
+      '(display-mode: minimal-ui)'
+    ).matches;
 
     // Check if the beforeinstallprompt was dismissed recently
     const wasPromptDismissed = this.wasInstallPromptRecentlyDismissed();
@@ -123,7 +133,9 @@ class PWAService {
       isAndroidStandalone,
       wasPromptDismissed,
       isWebView,
-      displayMode: window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser'
+      displayMode: window.matchMedia('(display-mode: standalone)').matches
+        ? 'standalone'
+        : 'browser',
     });
 
     return isStandalone || isIOSStandalone || isAndroidStandalone || isWebView;
@@ -141,7 +153,7 @@ class PWAService {
     try {
       const result = await this.installPrompt.prompt();
       console.log('PWA: Install prompt result:', result);
-      
+
       if (result.outcome === 'accepted') {
         this.installPrompt = null;
         localStorage.setItem('pwa_install_dismissed', 'true');
@@ -150,9 +162,12 @@ class PWAService {
       } else if (result.outcome === 'dismissed') {
         // User dismissed the prompt, don't show it again for a while
         localStorage.setItem('pwa_install_dismissed', 'true');
-        localStorage.setItem('pwa_install_dismissed_time', Date.now().toString());
+        localStorage.setItem(
+          'pwa_install_dismissed_time',
+          Date.now().toString()
+        );
       }
-      
+
       return false;
     } catch (error) {
       console.error('PWA: Error during app installation:', error);
@@ -174,7 +189,7 @@ class PWAService {
         timestamp: estimateData.timestamp,
         synced: estimateData.synced,
         lastModified: Date.now(),
-        status: estimateData.synced ? 'synced' : 'draft'
+        status: estimateData.synced ? 'synced' : 'draft',
       };
 
       await indexedDBService.saveEstimate(estimateRecord);
@@ -189,7 +204,9 @@ class PWAService {
       }
       localStorage.setItem('cached_estimates', JSON.stringify(estimates));
 
-      console.log('PWA: Estimate cached successfully in IndexedDB and localStorage');
+      console.log(
+        'PWA: Estimate cached successfully in IndexedDB and localStorage'
+      );
     } catch (error) {
       console.error('PWA: Error caching estimate:', error);
       // Fallback to localStorage only
@@ -214,7 +231,7 @@ class PWAService {
           selectedCaveats: record.selectedCaveats,
           companyInfo: record.companyInfo,
           timestamp: record.timestamp,
-          synced: record.synced
+          synced: record.synced,
         }));
       }
 
@@ -278,9 +295,9 @@ class PWAService {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRF-TOKEN': this.getCSRFToken()
+              'X-CSRF-TOKEN': this.getCSRFToken(),
             },
-            body: JSON.stringify(estimate)
+            body: JSON.stringify(estimate),
           });
 
           if (response.ok) {
@@ -318,7 +335,9 @@ class PWAService {
    * Get CSRF token
    */
   private getCSRFToken(): string {
-    const metaToken = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement;
+    const metaToken = document.querySelector(
+      'meta[name="csrf-token"]'
+    ) as HTMLMetaElement;
     return metaToken ? metaToken.content : '';
   }
 
@@ -335,27 +354,32 @@ class PWAService {
    */
   private handleOnlineStatusChange(isOnline: boolean): void {
     console.log('PWA: Online status changed:', isOnline);
-    
+
     if (isOnline) {
       // Trigger sync when coming back online
       this.syncEstimates();
     }
-    
+
     this.onlineStatusCallbacks.forEach(callback => callback(isOnline));
   }
 
   /**
    * Handle service worker update
    */
-  private handleServiceWorkerUpdate(registration: ServiceWorkerRegistration): void {
+  private handleServiceWorkerUpdate(
+    registration: ServiceWorkerRegistration
+  ): void {
     const newWorker = registration.installing;
     if (!newWorker) return;
 
     newWorker.addEventListener('statechange', () => {
-      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+      if (
+        newWorker.state === 'installed' &&
+        navigator.serviceWorker.controller
+      ) {
         // New service worker is available
         console.log('PWA: New service worker available');
-        
+
         // Optionally show update notification to user
         this.showUpdateNotification();
       }
@@ -368,7 +392,7 @@ class PWAService {
   private showUpdateNotification(): void {
     // This could trigger a UI notification
     console.log('PWA: App update available');
-    
+
     // For now, just reload after a delay
     setTimeout(() => {
       if (confirm('A new version of the app is available. Reload to update?')) {

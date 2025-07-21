@@ -58,31 +58,35 @@ class PermissionService {
       permissions: [
         { action: 'create', resource: 'estimate' },
         { action: 'read', resource: 'estimate', conditions: { owner: 'self' } },
-        { action: 'update', resource: 'estimate', conditions: { owner: 'self' } },
+        {
+          action: 'update',
+          resource: 'estimate',
+          conditions: { owner: 'self' },
+        },
         { action: 'capture', resource: 'photo' },
         { action: 'read', resource: 'customer' },
-        { action: 'create', resource: 'customer' }
+        { action: 'create', resource: 'customer' },
       ],
       discountLimit: 5, // 5% maximum discount
       priceOverride: false,
       canApprove: false,
       canViewReports: false,
       canManageUsers: false,
-      canEditConfig: false
+      canEditConfig: false,
     });
 
     // Admin Role - Full system control
     this.rolePermissions.set('admin', {
       role: 'admin',
       permissions: [
-        { action: '*', resource: '*' } // Full access
+        { action: '*', resource: '*' }, // Full access
       ],
       discountLimit: 100, // No limit
       priceOverride: true,
       canApprove: true,
       canViewReports: true,
       canManageUsers: true,
-      canEditConfig: true
+      canEditConfig: true,
     });
 
     // Office Role - Review and edit access
@@ -97,14 +101,14 @@ class PermissionService {
         { action: 'update', resource: 'customer' },
         { action: 'create', resource: 'customer' },
         { action: 'read', resource: 'report' },
-        { action: 'approve', resource: 'discount' }
+        { action: 'approve', resource: 'discount' },
       ],
       discountLimit: 20, // 20% maximum discount
       priceOverride: true,
       canApprove: true,
       canViewReports: true,
       canManageUsers: false,
-      canEditConfig: false
+      canEditConfig: false,
     });
 
     // Viewer Role - Read-only access
@@ -113,14 +117,14 @@ class PermissionService {
       permissions: [
         { action: 'read', resource: 'estimate' },
         { action: 'read', resource: 'customer' },
-        { action: 'read', resource: 'report' }
+        { action: 'read', resource: 'report' },
       ],
       discountLimit: 0, // No discounting
       priceOverride: false,
       canApprove: false,
       canViewReports: true,
       canManageUsers: false,
-      canEditConfig: false
+      canEditConfig: false,
     });
   }
 
@@ -142,7 +146,11 @@ class PermissionService {
   /**
    * Check if user has permission for action on resource
    */
-  public hasPermission(action: string, resource: string, context?: Record<string, any>): boolean {
+  public hasPermission(
+    action: string,
+    resource: string,
+    context?: Record<string, any>
+  ): boolean {
     if (!this.currentUser) {
       return false;
     }
@@ -164,7 +172,7 @@ class PermissionService {
     return rolePerms.permissions.some(perm => {
       const actionMatch = perm.action === action || perm.action === '*';
       const resourceMatch = perm.resource === resource || perm.resource === '*';
-      
+
       if (!actionMatch || !resourceMatch) {
         return false;
       }
@@ -181,7 +189,10 @@ class PermissionService {
   /**
    * Check permission conditions
    */
-  private checkConditions(conditions: Record<string, any>, context: Record<string, any>): boolean {
+  private checkConditions(
+    conditions: Record<string, any>,
+    context: Record<string, any>
+  ): boolean {
     for (const [key, value] of Object.entries(conditions)) {
       if (key === 'owner' && value === 'self') {
         // Check if user owns the resource
@@ -236,16 +247,21 @@ class PermissionService {
     }
 
     const maxDiscount = this.getMaxDiscountPercent();
-    
+
     if (override.discount > maxDiscount) {
       if (this.canApproveDiscounts()) {
         requiresApproval = true;
       } else {
-        errors.push(`Discount of ${override.discount}% exceeds maximum allowed (${maxDiscount}%)`);
+        errors.push(
+          `Discount of ${override.discount}% exceeds maximum allowed (${maxDiscount}%)`
+        );
       }
     }
 
-    if (!this.canOverridePrices() && override.newPrice !== override.originalPrice) {
+    if (
+      !this.canOverridePrices() &&
+      override.newPrice !== override.originalPrice
+    ) {
       errors.push('User not authorized to override prices');
     }
 
@@ -256,7 +272,7 @@ class PermissionService {
     return {
       valid: errors.length === 0,
       requiresApproval,
-      errors
+      errors,
     };
   }
 
@@ -283,14 +299,16 @@ class PermissionService {
       userRole: this.currentUser?.role,
       estimateId,
       override,
-      approved: override.approvedBy !== undefined
+      approved: override.approvedBy !== undefined,
     };
 
     // Store in IndexedDB or send to server
     console.log('PermissionService: Price override logged:', logEntry);
-    
+
     // In a real implementation, this would be stored persistently
-    const auditLog = JSON.parse(localStorage.getItem('price_override_audit') || '[]');
+    const auditLog = JSON.parse(
+      localStorage.getItem('price_override_audit') || '[]'
+    );
     auditLog.push(logEntry);
     localStorage.setItem('price_override_audit', JSON.stringify(auditLog));
   }
@@ -349,9 +367,10 @@ class PermissionService {
    */
   public createPermissionGuard(action: string, resource: string) {
     return {
-      canAccess: (context?: Record<string, any>) => this.hasPermission(action, resource, context),
+      canAccess: (context?: Record<string, any>) =>
+        this.hasPermission(action, resource, context),
       role: this.currentUser?.role,
-      user: this.currentUser
+      user: this.currentUser,
     };
   }
 
@@ -363,7 +382,7 @@ class PermissionService {
       sales: 'Sales Representative',
       admin: 'Administrator',
       office: 'Office Manager',
-      viewer: 'Viewer'
+      viewer: 'Viewer',
     };
 
     return roleNames[role] || role;

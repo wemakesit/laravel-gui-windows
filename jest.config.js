@@ -20,7 +20,7 @@ export default {
   },
 
   // Module name mapping for aliases
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/resources/js/$1',
     '^@components/(.*)$': '<rootDir>/resources/js/Components/$1',
     '^@services/(.*)$': '<rootDir>/resources/js/Services/$1',
@@ -28,7 +28,7 @@ export default {
   },
 
   // Coverage configuration
-  collectCoverage: true,
+  collectCoverage: false,
   collectCoverageFrom: [
     'resources/js/**/*.{js,jsx,ts,tsx}',
     '!resources/js/**/*.d.ts',

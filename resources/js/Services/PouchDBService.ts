@@ -9,7 +9,13 @@ import PouchDB from 'pouchdb';
 export interface ConfigDocument {
   _id: string;
   _rev?: string;
-  type: 'window_types' | 'extras' | 'finishes' | 'company_info' | 'pdf_text_config' | 'options';
+  type:
+    | 'window_types'
+    | 'extras'
+    | 'finishes'
+    | 'company_info'
+    | 'pdf_text_config'
+    | 'options';
   data: any;
   lastUpdated: number;
   version: number;
@@ -32,15 +38,18 @@ class PouchDBService {
   private syncHandlers: any[] = [];
 
   constructor() {
-    this.remoteConfigURL = process.env.COUCHDB_CONFIG_URL || 'http://localhost:5984/window_config';
-    this.remoteEstimatesURL = process.env.COUCHDB_ESTIMATES_URL || 'http://localhost:5984/window_estimates';
-    
+    this.remoteConfigURL =
+      process.env.COUCHDB_CONFIG_URL || 'http://localhost:5984/window_config';
+    this.remoteEstimatesURL =
+      process.env.COUCHDB_ESTIMATES_URL ||
+      'http://localhost:5984/window_estimates';
+
     this.syncStatus = {
       isOnline: navigator.onLine,
       lastSync: null,
       syncInProgress: false,
       error: null,
-      documentsCount: 0
+      documentsCount: 0,
     };
 
     this.initializeDatabases();
@@ -55,13 +64,13 @@ class PouchDBService {
       // Initialize configuration database
       this.configDB = new PouchDB('window_config', {
         auto_compaction: true,
-        revs_limit: 10
+        revs_limit: 10,
       });
 
       // Initialize estimates database
       this.estimatesDB = new PouchDB('window_estimates', {
         auto_compaction: true,
-        revs_limit: 10
+        revs_limit: 10,
       });
 
       console.log('PouchDB: Databases initialized successfully');
@@ -102,14 +111,17 @@ class PouchDBService {
   /**
    * Save configuration document
    */
-  public async saveConfig(type: ConfigDocument['type'], data: any): Promise<void> {
+  public async saveConfig(
+    type: ConfigDocument['type'],
+    data: any
+  ): Promise<void> {
     try {
       const doc: ConfigDocument = {
         _id: `config_${type}`,
         type,
         data,
         lastUpdated: Date.now(),
-        version: 1
+        version: 1,
       };
 
       // Try to get existing document to preserve _rev
@@ -123,7 +135,7 @@ class PouchDBService {
 
       await this.configDB.put(doc);
       await this.updateDocumentCount();
-      
+
       console.log(`PouchDB: Saved ${type} configuration`);
     } catch (error) {
       console.error(`PouchDB: Error saving ${type} configuration:`, error);
@@ -155,7 +167,7 @@ class PouchDBService {
       const result = await this.configDB.allDocs({
         include_docs: true,
         startkey: 'config_',
-        endkey: 'config_\ufff0'
+        endkey: 'config_\ufff0',
       });
 
       const config: Record<string, any> = {};
@@ -194,13 +206,13 @@ class PouchDBService {
       await this.configDB.destroy();
       this.configDB = new PouchDB('window_config', {
         auto_compaction: true,
-        revs_limit: 10
+        revs_limit: 10,
       });
 
       // Replicate from remote (one-way sync from CouchDB to PouchDB)
       const replication = this.configDB.replicate.from(this.remoteConfigURL, {
         live: false,
-        retry: false
+        retry: false,
       });
 
       await new Promise((resolve, reject) => {
@@ -220,7 +232,6 @@ class PouchDBService {
 
       // Notify sync handlers
       this.notifySyncHandlers();
-
     } catch (error) {
       console.error('PouchDB: Force sync error:', error);
       this.syncStatus.error = error.message;
@@ -246,7 +257,7 @@ class PouchDBService {
         retry: true,
         back_off_function: (delay: number) => {
           return Math.min(delay * 2, 60000); // Max 1 minute delay
-        }
+        },
       });
 
       configSync.on('change', (info: any) => {
@@ -267,7 +278,7 @@ class PouchDBService {
         retry: true,
         back_off_function: (delay: number) => {
           return Math.min(delay * 2, 60000);
-        }
+        },
       });
 
       estimatesSync.on('change', (info: any) => {
@@ -333,7 +344,7 @@ class PouchDBService {
         _id: `estimate_${estimate.id}`,
         type: 'estimate',
         data: estimate,
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       await this.estimatesDB.put(doc);
@@ -352,7 +363,7 @@ class PouchDBService {
       const result = await this.estimatesDB.allDocs({
         include_docs: true,
         startkey: 'estimate_',
-        endkey: 'estimate_\ufff0'
+        endkey: 'estimate_\ufff0',
       });
 
       return result.rows.map((row: any) => row.doc.data);

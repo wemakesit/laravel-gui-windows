@@ -218,17 +218,21 @@ export default function CustomerInfoStep({
       };
 
       // Only update if there's a significant difference (not just empty vs undefined)
-      const hasSignificantData = Object.values(normalizedCustomerInfo).some(value =>
-        value && value.toString().trim().length > 0
+      const hasSignificantData = Object.values(normalizedCustomerInfo).some(
+        value => value && value.toString().trim().length > 0
       );
 
       // Check if current formData is empty or significantly different
-      const currentHasData = Object.values(formData).some(value =>
-        value && value.toString().trim().length > 0
+      const currentHasData = Object.values(formData).some(
+        value => value && value.toString().trim().length > 0
       );
 
       // Only update if customerInfo has data and current form is empty, or if it's a load operation
-      if (hasSignificantData && (!currentHasData || JSON.stringify(customerInfo) !== JSON.stringify(formData))) {
+      if (
+        hasSignificantData &&
+        (!currentHasData ||
+          JSON.stringify(customerInfo) !== JSON.stringify(formData))
+      ) {
         console.log('CustomerInfoStep: Loading customer data from parent');
         isParentUpdateRef.current = true;
         setFormData(normalizedCustomerInfo);

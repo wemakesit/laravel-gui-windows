@@ -33,32 +33,36 @@ class CameraService {
    * Check camera capabilities
    */
   public async getCameraCapabilities(): Promise<CameraCapabilities> {
-    const hasCamera = 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices;
-    
+    const hasCamera =
+      'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices;
+
     if (!hasCamera) {
       return {
         hasCamera: false,
         hasMultipleCameras: false,
-        supportedConstraints: {}
+        supportedConstraints: {},
       };
     }
 
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      const supportedConstraints = navigator.mediaDevices.getSupportedConstraints();
+      const videoDevices = devices.filter(
+        device => device.kind === 'videoinput'
+      );
+      const supportedConstraints =
+        navigator.mediaDevices.getSupportedConstraints();
 
       return {
         hasCamera: videoDevices.length > 0,
         hasMultipleCameras: videoDevices.length > 1,
-        supportedConstraints
+        supportedConstraints,
       };
     } catch (error) {
       console.error('CameraService: Error checking capabilities:', error);
       return {
         hasCamera: false,
         hasMultipleCameras: false,
-        supportedConstraints: {}
+        supportedConstraints: {},
       };
     }
   }
@@ -66,7 +70,9 @@ class CameraService {
   /**
    * Request camera permission and start stream
    */
-  public async startCamera(facingMode: 'user' | 'environment' = 'environment'): Promise<MediaStream> {
+  public async startCamera(
+    facingMode: 'user' | 'environment' = 'environment'
+  ): Promise<MediaStream> {
     try {
       // Stop existing stream if any
       await this.stopCamera();
@@ -75,9 +81,9 @@ class CameraService {
         video: {
           facingMode: { ideal: facingMode },
           width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 }
+          height: { ideal: 1080, max: 1080 },
         },
-        audio: false
+        audio: false,
       };
 
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -109,7 +115,7 @@ class CameraService {
     videoElement: HTMLVideoElement,
     options: PhotoCaptureOptions = {
       quality: 0.8,
-      format: 'jpeg'
+      format: 'jpeg',
     }
   ): Promise<Blob> {
     if (!this.canvas || !this.context) {
@@ -137,7 +143,7 @@ class CameraService {
     // Convert to blob
     return new Promise((resolve, reject) => {
       this.canvas!.toBlob(
-        (blob) => {
+        blob => {
           if (blob) {
             resolve(blob);
           } else {
@@ -174,7 +180,7 @@ class CameraService {
         size: blob.size,
         type: blob.type,
         // Width and height would be set if we extract them from the image
-      }
+      },
     };
 
     await indexedDBService.savePhoto(photoRecord);
@@ -185,7 +191,9 @@ class CameraService {
   /**
    * Get photos for estimate
    */
-  public async getPhotosForEstimate(estimateId: string): Promise<PhotoRecord[]> {
+  public async getPhotosForEstimate(
+    estimateId: string
+  ): Promise<PhotoRecord[]> {
     return await indexedDBService.getPhotosForEstimate(estimateId);
   }
 
@@ -241,7 +249,7 @@ class CameraService {
 
         // Convert to blob
         this.canvas.toBlob(
-          (compressedBlob) => {
+          compressedBlob => {
             if (compressedBlob) {
               resolve(compressedBlob);
             } else {
@@ -270,26 +278,31 @@ class CameraService {
     isRequired: boolean;
   }> {
     const photos = await this.getPhotosForEstimate(estimateId);
-    const windowPhotos = photos.filter(photo => photo.windowIndex === windowIndex);
+    const windowPhotos = photos.filter(
+      photo => photo.windowIndex === windowIndex
+    );
 
     return {
       hasPhoto: windowPhotos.length > 0,
       photoCount: windowPhotos.length,
-      isRequired: true // As per MVP requirements, photos are required
+      isRequired: true, // As per MVP requirements, photos are required
     };
   }
 
   /**
    * Get missing photo report
    */
-  public async getMissingPhotoReport(estimateId: string, windowCount: number): Promise<{
+  public async getMissingPhotoReport(
+    estimateId: string,
+    windowCount: number
+  ): Promise<{
     missingPhotos: number[];
     totalMissing: number;
     completionRate: number;
   }> {
     const photos = await this.getPhotosForEstimate(estimateId);
     const windowsWithPhotos = new Set(photos.map(photo => photo.windowIndex));
-    
+
     const missingPhotos: number[] = [];
     for (let i = 0; i < windowCount; i++) {
       if (!windowsWithPhotos.has(i)) {
@@ -300,7 +313,8 @@ class CameraService {
     return {
       missingPhotos,
       totalMissing: missingPhotos.length,
-      completionRate: ((windowCount - missingPhotos.length) / windowCount) * 100
+      completionRate:
+        ((windowCount - missingPhotos.length) / windowCount) * 100,
     };
   }
 }

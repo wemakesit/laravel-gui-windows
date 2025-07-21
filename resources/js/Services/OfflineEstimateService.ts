@@ -77,7 +77,7 @@ class OfflineEstimateService {
   private async generateReferenceNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const estimates = await indexedDBService.getAllEstimates();
-    
+
     // Count estimates from current year
     const currentYearEstimates = estimates.filter(est => {
       const estYear = new Date(est.timestamp).getFullYear();
@@ -91,19 +91,28 @@ class OfflineEstimateService {
   /**
    * Calculate pricing for a single window
    */
-  private calculateWindowPricing(window: any, cachedConfig: any): WindowBreakdown {
+  private calculateWindowPricing(
+    window: any,
+    cachedConfig: any
+  ): WindowBreakdown {
     const windowTypes = cachedConfig.windowTypes || [];
     const extras = cachedConfig.extras?.extras || [];
     const finishes = cachedConfig.finishes?.finishes || [];
 
     // Find window type pricing
-    const windowType = windowTypes.find((type: any) => type.Type === window.type);
+    const windowType = windowTypes.find(
+      (type: any) => type.Type === window.type
+    );
     const basePrice = windowType?.Cost || windowType?.BasePrice || 0;
 
     // Calculate extras total
     const windowExtras = window.extras || [];
     let extrasTotal = 0;
-    const extrasBreakdown: Array<{ name: string; cost: number; quantity?: number }> = [];
+    const extrasBreakdown: Array<{
+      name: string;
+      cost: number;
+      quantity?: number;
+    }> = [];
 
     windowExtras.forEach((extra: any) => {
       const extraData = extras.find((e: any) => e.Name === extra.name);
@@ -113,7 +122,7 @@ class OfflineEstimateService {
         extrasBreakdown.push({
           name: extra.name,
           cost: extraCost,
-          quantity: 1
+          quantity: 1,
         });
       }
     });
@@ -123,23 +132,27 @@ class OfflineEstimateService {
     const finishesBreakdown: Array<{ name: string; cost: number }> = [];
 
     if (window.paint_finish) {
-      const finishData = finishes.find((f: any) => f.Name === window.paint_finish);
+      const finishData = finishes.find(
+        (f: any) => f.Name === window.paint_finish
+      );
       if (finishData) {
         finishesTotal += finishData.Cost || 0;
         finishesBreakdown.push({
           name: window.paint_finish,
-          cost: finishData.Cost || 0
+          cost: finishData.Cost || 0,
         });
       }
     }
 
     if (window.hardware_finish) {
-      const finishData = finishes.find((f: any) => f.Name === window.hardware_finish);
+      const finishData = finishes.find(
+        (f: any) => f.Name === window.hardware_finish
+      );
       if (finishData) {
         finishesTotal += finishData.Cost || 0;
         finishesBreakdown.push({
           name: window.hardware_finish,
-          cost: finishData.Cost || 0
+          cost: finishData.Cost || 0,
         });
       }
     }
@@ -148,7 +161,9 @@ class OfflineEstimateService {
     const lineTotal = (basePrice + extrasTotal + finishesTotal) * quantity;
 
     return {
-      id: window.id || `window-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id:
+        window.id ||
+        `window-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       room: window.room || '',
       type: window.type || '',
       quantity,
@@ -158,7 +173,7 @@ class OfflineEstimateService {
       lineTotal,
       extras: extrasBreakdown,
       finishes: finishesBreakdown,
-      options: window.options || [1] // Default to Option 1
+      options: window.options || [1], // Default to Option 1
     };
   }
 
@@ -170,12 +185,22 @@ class OfflineEstimateService {
     vatRate: number = this.VAT_RATE_DEFAULT,
     discountPercent: number = 0
   ): EstimateBreakdown {
-    const windowsTotal = windows.reduce((total, window) => total + window.lineTotal, 0);
-    const extrasTotal = windows.reduce((total, window) => total + window.extrasTotal * window.quantity, 0);
-    const finishesTotal = windows.reduce((total, window) => total + window.finishesTotal * window.quantity, 0);
+    const windowsTotal = windows.reduce(
+      (total, window) => total + window.lineTotal,
+      0
+    );
+    const extrasTotal = windows.reduce(
+      (total, window) => total + window.extrasTotal * window.quantity,
+      0
+    );
+    const finishesTotal = windows.reduce(
+      (total, window) => total + window.finishesTotal * window.quantity,
+      0
+    );
 
     const subtotal = windowsTotal;
-    const discountAmount = discountPercent > 0 ? (subtotal * discountPercent / 100) : 0;
+    const discountAmount =
+      discountPercent > 0 ? (subtotal * discountPercent) / 100 : 0;
     const discountedSubtotal = subtotal - discountAmount;
     const vat = discountedSubtotal * vatRate;
     const total = discountedSubtotal + vat;
@@ -189,7 +214,7 @@ class OfflineEstimateService {
       extrasTotal,
       finishesTotal,
       discountAmount: discountAmount > 0 ? discountAmount : undefined,
-      discountPercent: discountPercent > 0 ? discountPercent : undefined
+      discountPercent: discountPercent > 0 ? discountPercent : undefined,
     };
   }
 
@@ -208,26 +233,33 @@ class OfflineEstimateService {
       const cachedConfig = await configCacheService.getConfig();
 
       if (!cachedConfig) {
-        throw new Error('Configuration data not available offline. Please sync when online.');
+        throw new Error(
+          'Configuration data not available offline. Please sync when online.'
+        );
       }
 
       // Check if we have any configuration data from PouchDB
-      if ((!cachedConfig.windowTypes || cachedConfig.windowTypes.length === 0) &&
-          (!cachedConfig.extras || cachedConfig.extras.length === 0) &&
-          (!cachedConfig.finishes || cachedConfig.finishes.length === 0)) {
-        throw new Error('No configuration data available. Please sync with CouchDB when online.');
+      if (
+        (!cachedConfig.windowTypes || cachedConfig.windowTypes.length === 0) &&
+        (!cachedConfig.extras || cachedConfig.extras.length === 0) &&
+        (!cachedConfig.finishes || cachedConfig.finishes.length === 0)
+      ) {
+        throw new Error(
+          'No configuration data available. Please sync with CouchDB when online.'
+        );
       }
 
       // Generate reference number
       const referenceNumber = await this.generateReferenceNumber();
 
       // Calculate window pricing
-      const windowBreakdowns = estimateData.windows.map(window => 
+      const windowBreakdowns = estimateData.windows.map(window =>
         this.calculateWindowPricing(window, cachedConfig)
       );
 
       // Get VAT rate from config or use default
-      const vatRate = cachedConfig.pdfTextConfig?.formats?.vat_rate || this.VAT_RATE_DEFAULT;
+      const vatRate =
+        cachedConfig.pdfTextConfig?.formats?.vat_rate || this.VAT_RATE_DEFAULT;
 
       // Calculate estimate breakdown
       const breakdown = this.calculateEstimateBreakdown(
@@ -247,7 +279,7 @@ class OfflineEstimateService {
           email: estimateData.customerInfo.email || '',
           phone: estimateData.customerInfo.phone || '',
           address: estimateData.customerInfo.address || '',
-          additional_info: estimateData.customerInfo.additional_info
+          additional_info: estimateData.customerInfo.additional_info,
         },
         companyInfo: estimateData.companyInfo || cachedConfig.companyInfo || {},
         windows: windowBreakdowns,
@@ -259,17 +291,22 @@ class OfflineEstimateService {
         synced: false,
         metadata: {
           windowCount: windowBreakdowns.length,
-          totalItems: windowBreakdowns.reduce((total, window) => total + window.quantity, 0),
-          deviceInfo: navigator.userAgent
-        }
+          totalItems: windowBreakdowns.reduce(
+            (total, window) => total + window.quantity,
+            0
+          ),
+          deviceInfo: navigator.userAgent,
+        },
       };
 
       // Store in IndexedDB
       await this.saveEstimate(completedEstimate);
 
-      console.log('OfflineEstimate: Estimate generated successfully', referenceNumber);
+      console.log(
+        'OfflineEstimate: Estimate generated successfully',
+        referenceNumber
+      );
       return completedEstimate;
-
     } catch (error) {
       console.error('OfflineEstimate: Error generating estimate:', error);
       throw error;
@@ -289,13 +326,16 @@ class OfflineEstimateService {
       timestamp: estimate.createdAt.getTime(),
       synced: estimate.synced,
       lastModified: estimate.lastModified.getTime(),
-      status: estimate.status
+      status: estimate.status,
     };
 
     await indexedDBService.saveEstimate(estimateRecord);
 
     // Also save the complete estimate data separately for easy retrieval
-    await indexedDBService.saveConfig(`completed_estimate_${estimate.id}`, estimate);
+    await indexedDBService.saveConfig(
+      `completed_estimate_${estimate.id}`,
+      estimate
+    );
   }
 
   /**
@@ -309,17 +349,24 @@ class OfflineEstimateService {
       for (const estimate of estimates) {
         if (estimate.status === 'completed') {
           try {
-            const fullEstimate = await indexedDBService.getConfig(`completed_estimate_${estimate.id}`);
+            const fullEstimate = await indexedDBService.getConfig(
+              `completed_estimate_${estimate.id}`
+            );
             if (fullEstimate) {
               completedEstimates.push(fullEstimate);
             }
           } catch (error) {
-            console.warn('Could not retrieve full estimate data for:', estimate.id);
+            console.warn(
+              'Could not retrieve full estimate data for:',
+              estimate.id
+            );
           }
         }
       }
 
-      return completedEstimates.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return completedEstimates.sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      );
     } catch (error) {
       console.error('OfflineEstimate: Error retrieving estimates:', error);
       return [];
@@ -331,7 +378,9 @@ class OfflineEstimateService {
    */
   public async getEstimateById(id: string): Promise<CompletedEstimate | null> {
     try {
-      const estimate = await indexedDBService.getConfig(`completed_estimate_${id}`);
+      const estimate = await indexedDBService.getConfig(
+        `completed_estimate_${id}`
+      );
       return estimate || null;
     } catch (error) {
       console.error('OfflineEstimate: Error retrieving estimate:', error);
@@ -353,8 +402,6 @@ class OfflineEstimateService {
       throw error;
     }
   }
-
-
 }
 
 // Export singleton instance

@@ -1,7 +1,13 @@
 import { usePWA } from '../Hooks/usePWA';
 
 export default function PWADebug() {
-  const { status, canInstall, isInstalled, serviceWorkerReady, resetInstallPrompt } = usePWA();
+  const {
+    status,
+    canInstall,
+    isInstalled,
+    serviceWorkerReady,
+    resetInstallPrompt,
+  } = usePWA();
 
   if (process.env.NODE_ENV === 'production') {
     return null;

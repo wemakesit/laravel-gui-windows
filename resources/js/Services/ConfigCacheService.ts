@@ -35,7 +35,10 @@ class ConfigCacheService {
         await pouchDBService.saveConfig('company_info', config.companyInfo);
       }
       if (config.pdfTextConfig) {
-        await pouchDBService.saveConfig('pdf_text_config', config.pdfTextConfig);
+        await pouchDBService.saveConfig(
+          'pdf_text_config',
+          config.pdfTextConfig
+        );
       }
       if (config.options) {
         await pouchDBService.saveConfig('options', config.options);
@@ -63,12 +66,15 @@ class ConfigCacheService {
         companyInfo: allConfig.company_info || {},
         pdfTextConfig: allConfig.pdf_text_config || {},
         options: allConfig.options || [],
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       return config;
     } catch (error) {
-      console.error('ConfigCache: Error getting configuration from PouchDB:', error);
+      console.error(
+        'ConfigCache: Error getting configuration from PouchDB:',
+        error
+      );
 
       // Return empty config if PouchDB fails
       return this.getEmptyConfig();
@@ -86,7 +92,7 @@ class ConfigCacheService {
       companyInfo: {},
       pdfTextConfig: {},
       options: [],
-      lastUpdated: 0
+      lastUpdated: 0,
     };
   }
 
@@ -172,10 +178,12 @@ class ConfigCacheService {
   public async hasConfig(): Promise<boolean> {
     try {
       const config = await this.getConfig();
-      return config.windowTypes.length > 0 ||
-             config.extras.length > 0 ||
-             config.finishes.length > 0 ||
-             Object.keys(config.companyInfo).length > 0;
+      return (
+        config.windowTypes.length > 0 ||
+        config.extras.length > 0 ||
+        config.finishes.length > 0 ||
+        Object.keys(config.companyInfo).length > 0
+      );
     } catch (error) {
       return false;
     }

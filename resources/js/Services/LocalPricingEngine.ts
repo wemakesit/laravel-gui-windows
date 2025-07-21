@@ -61,15 +61,19 @@ class LocalPricingEngine {
       const cachedConfig = await configCacheService.getConfig();
 
       if (!cachedConfig) {
-        throw new Error('No cached configuration available for pricing. Please sync with CouchDB when online.');
+        throw new Error(
+          'No cached configuration available for pricing. Please sync with CouchDB when online.'
+        );
       }
 
       this.pricingContext = {
         windowTypes: cachedConfig.windowTypes || [],
         extras: cachedConfig.extras || [],
         finishes: cachedConfig.finishes || [],
-        vatRate: cachedConfig.pdfTextConfig?.formats?.vat_rate || this.DEFAULT_VAT_RATE,
-        discountRules: [] // TODO: Implement discount rules from config
+        vatRate:
+          cachedConfig.pdfTextConfig?.formats?.vat_rate ||
+          this.DEFAULT_VAT_RATE,
+        discountRules: [], // TODO: Implement discount rules from config
       };
 
       console.log('LocalPricingEngine: Initialized with cached configuration');
@@ -84,7 +88,9 @@ class LocalPricingEngine {
    */
   private ensurePricingContext(): PricingContext {
     if (!this.pricingContext) {
-      throw new Error('Pricing engine not initialized. Call initialize() first.');
+      throw new Error(
+        'Pricing engine not initialized. Call initialize() first.'
+      );
     }
     return this.pricingContext;
   }
@@ -119,7 +125,10 @@ class LocalPricingEngine {
   /**
    * Calculate pricing for a single window
    */
-  public calculateWindowPricing(window: any, applyDiscounts: boolean = false): WindowPricing {
+  public calculateWindowPricing(
+    window: any,
+    applyDiscounts: boolean = false
+  ): WindowPricing {
     const context = this.ensurePricingContext();
 
     // Base price calculation
@@ -160,7 +169,7 @@ class LocalPricingEngine {
       finishesTotal,
       subtotal,
       discountAmount,
-      total
+      total,
     };
   }
 
@@ -190,7 +199,11 @@ class LocalPricingEngine {
   /**
    * Check if discount rule is applicable to window
    */
-  private isDiscountRuleApplicable(rule: DiscountRule, window: any, subtotal: number): boolean {
+  private isDiscountRuleApplicable(
+    rule: DiscountRule,
+    window: any,
+    subtotal: number
+  ): boolean {
     if (!rule.conditions) {
       return true;
     }
@@ -208,7 +221,10 @@ class LocalPricingEngine {
     }
 
     // Check window types
-    if (conditions.windowTypes && !conditions.windowTypes.includes(window.type)) {
+    if (
+      conditions.windowTypes &&
+      !conditions.windowTypes.includes(window.type)
+    ) {
       return false;
     }
 
@@ -226,15 +242,33 @@ class LocalPricingEngine {
     const context = this.ensurePricingContext();
 
     // Calculate pricing for each window
-    const windowsPricing = windows.map(window => 
+    const windowsPricing = windows.map(window =>
       this.calculateWindowPricing(window, applyDiscountRules)
     );
 
     // Calculate totals
-    const windowsTotal = windowsPricing.reduce((total, pricing) => total + pricing.total, 0);
-    const extrasTotal = windowsPricing.reduce((total, pricing) => total + (pricing.extrasTotal * (windows[windowsPricing.indexOf(pricing)].quantity || 1)), 0);
-    const finishesTotal = windowsPricing.reduce((total, pricing) => total + (pricing.finishesTotal * (windows[windowsPricing.indexOf(pricing)].quantity || 1)), 0);
-    const discountTotal = windowsPricing.reduce((total, pricing) => total + pricing.discountAmount, 0);
+    const windowsTotal = windowsPricing.reduce(
+      (total, pricing) => total + pricing.total,
+      0
+    );
+    const extrasTotal = windowsPricing.reduce(
+      (total, pricing) =>
+        total +
+        pricing.extrasTotal *
+          (windows[windowsPricing.indexOf(pricing)].quantity || 1),
+      0
+    );
+    const finishesTotal = windowsPricing.reduce(
+      (total, pricing) =>
+        total +
+        pricing.finishesTotal *
+          (windows[windowsPricing.indexOf(pricing)].quantity || 1),
+      0
+    );
+    const discountTotal = windowsPricing.reduce(
+      (total, pricing) => total + pricing.discountAmount,
+      0
+    );
 
     let subtotal = windowsTotal;
 
@@ -262,8 +296,8 @@ class LocalPricingEngine {
         extrasTotal,
         finishesTotal,
         discountTotal: totalDiscount,
-        vatTotal: vatAmount
-      }
+        vatTotal: vatAmount,
+      },
     };
   }
 
@@ -285,7 +319,9 @@ class LocalPricingEngine {
           continue;
         }
 
-        const windowType = context.windowTypes.find(t => t.Type === window.type);
+        const windowType = context.windowTypes.find(
+          t => t.Type === window.type
+        );
         if (!windowType) {
           errors.push(`Window ${i + 1}: Unknown window type '${window.type}'`);
         }
@@ -302,16 +338,24 @@ class LocalPricingEngine {
 
         // Check finishes
         if (window.paint_finish) {
-          const finishData = context.finishes.find(f => f.Name === window.paint_finish);
+          const finishData = context.finishes.find(
+            f => f.Name === window.paint_finish
+          );
           if (!finishData) {
-            errors.push(`Window ${i + 1}: Unknown paint finish '${window.paint_finish}'`);
+            errors.push(
+              `Window ${i + 1}: Unknown paint finish '${window.paint_finish}'`
+            );
           }
         }
 
         if (window.hardware_finish) {
-          const finishData = context.finishes.find(f => f.Name === window.hardware_finish);
+          const finishData = context.finishes.find(
+            f => f.Name === window.hardware_finish
+          );
           if (!finishData) {
-            errors.push(`Window ${i + 1}: Unknown hardware finish '${window.hardware_finish}'`);
+            errors.push(
+              `Window ${i + 1}: Unknown hardware finish '${window.hardware_finish}'`
+            );
           }
         }
 
@@ -320,14 +364,13 @@ class LocalPricingEngine {
           errors.push(`Window ${i + 1}: Invalid quantity`);
         }
       }
-
     } catch (error) {
       errors.push(`Pricing validation error: ${error.message}`);
     }
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -369,11 +412,9 @@ class LocalPricingEngine {
   public formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: 'GBP'
+      currency: 'GBP',
     }).format(amount);
   }
-
-
 }
 
 // Export singleton instance

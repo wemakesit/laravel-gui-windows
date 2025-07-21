@@ -8,15 +8,10 @@ interface OfflineStatusProps {
 
 export default function OfflineStatus({
   className = '',
-  showWhenOnline = false
+  showWhenOnline = false,
 }: OfflineStatusProps) {
-  const {
-    isOnline,
-    isSyncing,
-    lastSync,
-    syncEstimates,
-    getCachedEstimates
-  } = usePWA();
+  const { isOnline, isSyncing, lastSync, syncEstimates, getCachedEstimates } =
+    usePWA();
 
   const [unsyncedCount, setUnsyncedCount] = useState(0);
 
@@ -49,17 +44,17 @@ export default function OfflineStatus({
 
   const formatLastSync = (date?: Date) => {
     if (!date) return 'Never';
-    
+
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
-    
+
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    
+
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
@@ -92,7 +87,8 @@ export default function OfflineStatus({
                   <strong>You're online.</strong>
                   {unsyncedCount > 0 && (
                     <span className='ml-1'>
-                      {unsyncedCount} estimate{unsyncedCount !== 1 ? 's' : ''} ready to sync.
+                      {unsyncedCount} estimate{unsyncedCount !== 1 ? 's' : ''}{' '}
+                      ready to sync.
                     </span>
                   )}
                 </p>
@@ -103,7 +99,7 @@ export default function OfflineStatus({
                 )}
               </div>
             </div>
-            
+
             {unsyncedCount > 0 && (
               <div className='flex-shrink-0'>
                 <button

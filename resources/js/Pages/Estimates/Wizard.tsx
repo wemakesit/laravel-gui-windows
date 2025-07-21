@@ -53,7 +53,7 @@ export default function Wizard({
     { id: 2, name: 'Option 2' },
     { id: 3, name: 'Option 3' },
     { id: 4, name: 'Option 4' },
-    { id: 5, name: 'Option 5' }
+    { id: 5, name: 'Option 5' },
   ];
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -84,7 +84,8 @@ export default function Wizard({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [completedEstimate, setCompletedEstimate] = useState<CompletedEstimate | null>(null);
+  const [completedEstimate, setCompletedEstimate] =
+    useState<CompletedEstimate | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
 
   // Ref for debouncing saves
@@ -261,13 +262,16 @@ export default function Wizard({
 
       saveTimeoutRef.current = window.setTimeout(() => {
         try {
-          localStorage.setItem('estimate_draft', JSON.stringify({
-            ...newData,
-            timestamp: Date.now(),
-            currentStep,
-            highestStepReached,
-            stepValidation
-          }));
+          localStorage.setItem(
+            'estimate_draft',
+            JSON.stringify({
+              ...newData,
+              timestamp: Date.now(),
+              currentStep,
+              highestStepReached,
+              stepValidation,
+            })
+          );
           console.log('Draft saved:', section);
         } catch (error) {
           console.error('Failed to save draft:', error);
@@ -456,12 +460,12 @@ export default function Wizard({
       setTimeout(() => {
         setNotification(null);
       }, 3000);
-
     } catch (error) {
       console.error('Failed to create estimate:', error);
       setNotification({
         type: 'error',
-        message: error.message || 'Failed to create estimate. Please try again.',
+        message:
+          error.message || 'Failed to create estimate. Please try again.',
       });
 
       // Clear error notification after 5 seconds
@@ -511,14 +515,14 @@ export default function Wizard({
       case 2:
         return formData.windows.length > 0;
       case 3:
-        return formData.windows.every(window =>
-          window.type && window.room && window.quantity > 0
+        return formData.windows.every(
+          window => window.type && window.room && window.quantity > 0
         );
       case 4:
         return true; // Extras are optional
       case 5:
-        return formData.windows.every(window =>
-          window.options && window.options.length > 0
+        return formData.windows.every(
+          window => window.options && window.options.length > 0
         );
       case 6:
         return true; // Review step
@@ -710,25 +714,37 @@ export default function Wizard({
           <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
             <div className='p-6 text-gray-900'>
               {/* Breadcrumb Navigation */}
-              <nav className="flex mb-6" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                  <li className="inline-flex items-center">
+              <nav className='flex mb-6' aria-label='Breadcrumb'>
+                <ol className='inline-flex items-center space-x-1 md:space-x-3'>
+                  <li className='inline-flex items-center'>
                     <Link
-                      href="/"
-                      className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600"
+                      href='/'
+                      className='inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600'
                     >
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                      <svg
+                        className='w-4 h-4 mr-2'
+                        fill='currentColor'
+                        viewBox='0 0 20 20'
+                      >
+                        <path d='M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z' />
                       </svg>
                       Dashboard
                     </Link>
                   </li>
-                  <li aria-current="page">
-                    <div className="flex items-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <li aria-current='page'>
+                    <div className='flex items-center'>
+                      <svg
+                        className='w-6 h-6 text-gray-400'
+                        fill='currentColor'
+                        viewBox='0 0 20 20'
+                      >
+                        <path
+                          fillRule='evenodd'
+                          d='M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z'
+                          clipRule='evenodd'
+                        />
                       </svg>
-                      <span className="ml-1 text-sm font-medium text-gray-500 md:ml-2">
+                      <span className='ml-1 text-sm font-medium text-gray-500 md:ml-2'>
                         Create Estimate
                       </span>
                     </div>
@@ -780,9 +796,9 @@ export default function Wizard({
                     </div>
                   )}
                 </div>
-                <div className="flex space-x-3">
+                <div className='flex space-x-3'>
                   <Link
-                    href="/"
+                    href='/'
                     className='px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700'
                   >
                     Dashboard

@@ -12,9 +12,15 @@ export default function InstallPrompt({
   className = '',
   variant = 'banner',
   onInstalled,
-  onDismissed
+  onDismissed,
 }: InstallPromptProps) {
-  const { canInstall, isInstalling, installApp, isInstalled, serviceWorkerReady } = usePWA();
+  const {
+    canInstall,
+    isInstalling,
+    installApp,
+    isInstalled,
+    serviceWorkerReady,
+  } = usePWA();
   const [dismissed, setDismissed] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
 
@@ -56,10 +62,10 @@ export default function InstallPrompt({
       // Fallback: Show manual install instructions
       alert(
         'To install this app:\n\n' +
-        '• Chrome: Click the menu (⋮) → "Install Window Estimate System"\n' +
-        '• Edge: Click the menu (⋯) → "Apps" → "Install this site as an app"\n' +
-        '• Safari: Click Share → "Add to Home Screen"\n' +
-        '• Firefox: Click the address bar install icon'
+          '• Chrome: Click the menu (⋮) → "Install Window Estimate System"\n' +
+          '• Edge: Click the menu (⋯) → "Apps" → "Install this site as an app"\n' +
+          '• Safari: Click Share → "Add to Home Screen"\n' +
+          '• Firefox: Click the address bar install icon'
       );
     }
   };
@@ -125,7 +131,9 @@ export default function InstallPrompt({
 
   if (variant === 'card') {
     return (
-      <div className={`bg-white rounded-lg shadow-md p-6 border border-gray-200 ${className}`}>
+      <div
+        className={`bg-white rounded-lg shadow-md p-6 border border-gray-200 ${className}`}
+      >
         <div className='flex items-start'>
           <div className='flex-shrink-0'>
             <div className='w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center'>
@@ -149,8 +157,8 @@ export default function InstallPrompt({
               Install Window Estimate System
             </h3>
             <p className='mt-1 text-sm text-gray-600'>
-              Install this app on your Surface Pro for faster access and offline functionality. 
-              Perfect for field work and on-site estimates.
+              Install this app on your Surface Pro for faster access and offline
+              functionality. Perfect for field work and on-site estimates.
             </p>
             <div className='mt-4 flex space-x-3'>
               <button
@@ -193,8 +201,8 @@ export default function InstallPrompt({
           </div>
           <div className='ml-3'>
             <p className='text-sm text-blue-700'>
-              <strong>Install this app</strong> for faster access and offline functionality.
-              Perfect for Surface Pro field work.
+              <strong>Install this app</strong> for faster access and offline
+              functionality. Perfect for Surface Pro field work.
             </p>
           </div>
         </div>

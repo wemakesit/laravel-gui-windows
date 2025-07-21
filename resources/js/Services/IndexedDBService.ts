@@ -74,7 +74,7 @@ class IndexedDBService {
         resolve(request.result);
       };
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result;
         this.createObjectStores(db);
       };
@@ -87,7 +87,9 @@ class IndexedDBService {
   private createObjectStores(db: IDBDatabase): void {
     // Estimates store
     if (!db.objectStoreNames.contains('estimates')) {
-      const estimatesStore = db.createObjectStore('estimates', { keyPath: 'id' });
+      const estimatesStore = db.createObjectStore('estimates', {
+        keyPath: 'id',
+      });
       estimatesStore.createIndex('timestamp', 'timestamp', { unique: false });
       estimatesStore.createIndex('synced', 'synced', { unique: false });
       estimatesStore.createIndex('status', 'status', { unique: false });
@@ -125,19 +127,19 @@ class IndexedDBService {
    */
   public async saveEstimate(estimate: EstimateRecord): Promise<void> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['estimates'], 'readwrite');
       const store = transaction.objectStore('estimates');
-      
+
       estimate.lastModified = Date.now();
       const request = store.put(estimate);
-      
+
       request.onsuccess = () => {
         console.log('IndexedDB: Estimate saved:', estimate.id);
         resolve();
       };
-      
+
       request.onerror = () => {
         console.error('IndexedDB: Failed to save estimate:', request.error);
         reject(request.error);
@@ -150,16 +152,16 @@ class IndexedDBService {
    */
   public async getEstimate(id: string): Promise<EstimateRecord | null> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['estimates'], 'readonly');
       const store = transaction.objectStore('estimates');
       const request = store.get(id);
-      
+
       request.onsuccess = () => {
         resolve(request.result || null);
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -171,16 +173,16 @@ class IndexedDBService {
    */
   public async getAllEstimates(): Promise<EstimateRecord[]> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['estimates'], 'readonly');
       const store = transaction.objectStore('estimates');
       const request = store.getAll();
-      
+
       request.onsuccess = () => {
         resolve(request.result || []);
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -192,17 +194,17 @@ class IndexedDBService {
    */
   public async getUnsyncedEstimates(): Promise<EstimateRecord[]> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['estimates'], 'readonly');
       const store = transaction.objectStore('estimates');
       const index = store.index('synced');
       const request = index.getAll(false);
-      
+
       request.onsuccess = () => {
         resolve(request.result || []);
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -214,17 +216,17 @@ class IndexedDBService {
    */
   public async deleteEstimate(id: string): Promise<void> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['estimates'], 'readwrite');
       const store = transaction.objectStore('estimates');
       const request = store.delete(id);
-      
+
       request.onsuccess = () => {
         console.log('IndexedDB: Estimate deleted:', id);
         resolve();
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -236,25 +238,25 @@ class IndexedDBService {
    */
   public async saveConfig(key: string, data: any): Promise<void> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['config'], 'readwrite');
       const store = transaction.objectStore('config');
-      
+
       const configRecord: ConfigRecord = {
         key,
         data,
         timestamp: Date.now(),
-        version: 1
+        version: 1,
       };
-      
+
       const request = store.put(configRecord);
-      
+
       request.onsuccess = () => {
         console.log('IndexedDB: Config saved:', key);
         resolve();
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -310,17 +312,17 @@ class IndexedDBService {
    */
   public async savePhoto(photo: PhotoRecord): Promise<void> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['photos'], 'readwrite');
       const store = transaction.objectStore('photos');
       const request = store.put(photo);
-      
+
       request.onsuccess = () => {
         console.log('IndexedDB: Photo saved:', photo.id);
         resolve();
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -330,19 +332,21 @@ class IndexedDBService {
   /**
    * Get photos for estimate
    */
-  public async getPhotosForEstimate(estimateId: string): Promise<PhotoRecord[]> {
+  public async getPhotosForEstimate(
+    estimateId: string
+  ): Promise<PhotoRecord[]> {
     const db = await this.ensureDB();
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['photos'], 'readonly');
       const store = transaction.objectStore('photos');
       const index = store.index('estimateId');
       const request = index.getAll(estimateId);
-      
+
       request.onsuccess = () => {
         resolve(request.result || []);
       };
-      
+
       request.onerror = () => {
         reject(request.error);
       };
@@ -354,19 +358,19 @@ class IndexedDBService {
    */
   public async clearAllData(): Promise<void> {
     const db = await this.ensureDB();
-    
+
     const stores = ['estimates', 'config', 'photos'];
-    
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(stores, 'readwrite');
-      
+
       let completed = 0;
       const total = stores.length;
-      
+
       stores.forEach(storeName => {
         const store = transaction.objectStore(storeName);
         const request = store.clear();
-        
+
         request.onsuccess = () => {
           completed++;
           if (completed === total) {
@@ -374,7 +378,7 @@ class IndexedDBService {
             resolve();
           }
         };
-        
+
         request.onerror = () => {
           reject(request.error);
         };

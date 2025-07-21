@@ -52,6 +52,12 @@ export default function AuthenticatedLayout({
                 >
                   Dashboard
                 </NavLink>
+                <NavLink
+                  href={route('settings.index')}
+                  active={route().current('settings.index')}
+                >
+                  Settings
+                </NavLink>
               </div>
             </div>
 
@@ -146,6 +152,12 @@ export default function AuthenticatedLayout({
               active={route().current('dashboard')}
             >
               Dashboard
+            </ResponsiveNavLink>
+            <ResponsiveNavLink
+              href={route('settings.index')}
+              active={route().current('settings.index')}
+            >
+              Settings
             </ResponsiveNavLink>
           </div>
 

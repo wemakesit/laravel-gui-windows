@@ -39,6 +39,9 @@
         <link rel="apple-touch-icon" sizes="60x60" href="/icons/icon-60x60.svg">
         <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-57x57.svg">
 
+        <!-- PouchDB CDN -->
+        <script src="https://cdn.jsdelivr.net/npm/pouchdb@9.0.0/dist/pouchdb.min.js"></script>
+
         <!-- Scripts -->
         @routes
         @viteReactRefresh

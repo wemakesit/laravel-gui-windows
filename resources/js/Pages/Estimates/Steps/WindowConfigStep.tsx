@@ -1,15 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import WindowConfigForm from '../Components/WindowConfigForm';
-
-interface WindowConfigStepProps {
-  windows: any[];
-  windowTypes: any[];
-  finishes: any;
-  updateWindow: (index: number, window: any) => void;
-  currentWindow: number | null;
-  setCurrentWindow: (index: number | null) => void;
-  openModal: (modalData: any) => void;
-}
+import { WindowConfigStepProps } from '@/types/wizard';
 
 export default function WindowConfigStep({
   windows,
@@ -19,6 +10,7 @@ export default function WindowConfigStep({
   currentWindow,
   setCurrentWindow,
   openModal,
+  validateStep,
 }: WindowConfigStepProps) {
   const handleConfigureWindow = (index: number) => {
     setCurrentWindow(index);
@@ -44,6 +36,19 @@ export default function WindowConfigStep({
   const closeModal = () => {
     openModal(null);
   };
+
+  // Validation effect - check if all windows have required configuration
+  useEffect(() => {
+    if (validateStep) {
+      // A window is considered configured if it has glass_specification, paint_finish, and hardware_finish
+      const isValid = windows.length > 0 && windows.every(window =>
+        window.glass_specification &&
+        window.paint_finish &&
+        window.hardware_finish
+      );
+      validateStep(3, isValid);
+    }
+  }, [windows, validateStep]);
 
   return (
     <div className='space-y-6'>

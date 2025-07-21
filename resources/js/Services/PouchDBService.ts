@@ -3,7 +3,8 @@
  * Provides bidirectional sync with conflict resolution
  */
 
-import PouchDB from 'pouchdb';
+// PouchDB is loaded via CDN script tag in app.blade.php
+declare const PouchDB: any;
 
 export interface SyncStatus {
   isOnline: boolean;
@@ -73,6 +74,8 @@ class PouchDBService {
     }
   }
 
+
+
   /**
    * Subscribe to sync status updates
    */
@@ -125,14 +128,11 @@ class PouchDBService {
   async startSync(): Promise<void> {
     if (!navigator.onLine) return;
 
-    const configUrl =
-      import.meta.env.VITE_COUCHDB_CONFIG_URL || process.env.COUCHDB_CONFIG_URL;
-    const estimatesUrl =
-      import.meta.env.VITE_COUCHDB_ESTIMATES_URL ||
-      process.env.COUCHDB_ESTIMATES_URL;
+    const configUrl = import.meta.env.VITE_COUCHDB_CONFIG_URL;
+    const estimatesUrl = import.meta.env.VITE_COUCHDB_ESTIMATES_URL;
 
     if (!configUrl || !estimatesUrl) {
-      console.warn('CouchDB URLs not configured, sync disabled');
+      console.debug('CouchDB URLs not configured, sync disabled');
       return;
     }
 
@@ -227,11 +227,8 @@ class PouchDBService {
       throw new Error('Cannot force sync while offline');
     }
 
-    const configUrl =
-      import.meta.env.VITE_COUCHDB_CONFIG_URL || process.env.COUCHDB_CONFIG_URL;
-    const estimatesUrl =
-      import.meta.env.VITE_COUCHDB_ESTIMATES_URL ||
-      process.env.COUCHDB_ESTIMATES_URL;
+    const configUrl = import.meta.env.VITE_COUCHDB_CONFIG_URL;
+    const estimatesUrl = import.meta.env.VITE_COUCHDB_ESTIMATES_URL;
 
     if (!configUrl || !estimatesUrl) {
       throw new Error('CouchDB URLs not configured');

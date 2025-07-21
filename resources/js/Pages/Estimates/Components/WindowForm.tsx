@@ -1,37 +1,6 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { Combobox, Transition } from '@headlessui/react';
-
-interface WindowData {
-  room: string;
-  type: string;
-  quantity: number;
-  glass_specification?: string;
-  paint_finish?: string;
-  hardware_finish?: string;
-  cost: number;
-  extras?: any[];
-  options?: number;
-  additional_info?: string;
-  [key: string]: any;
-}
-
-interface WindowType {
-  Type: string;
-  Description?: string;
-  Cost?: number;
-  BasePrice?: number;
-}
-
-interface WindowFormProps {
-  windowData?: WindowData;
-  windowTypes:
-    | WindowType[]
-    | {
-        window_types?: WindowType[];
-      };
-  onSave: (windowData: WindowData) => void;
-  onCancel: () => void;
-}
+import { WindowItem, WindowType, WindowFormProps } from '@/types/wizard';
 
 export default function WindowForm({
   windowData,
@@ -39,7 +8,7 @@ export default function WindowForm({
   onSave,
   onCancel,
 }: WindowFormProps) {
-  const defaultWindow = {
+  const defaultWindow: WindowItem = {
     room: '',
     type: '',
     quantity: 1,

@@ -72,7 +72,7 @@ DB_CONNECTION=sqlite
 # Or configure MySQL/PostgreSQL if preferred
 
 # API Configuration
-API_BASE_URL=http://localhost:8001
+API_BASE_URL=http://127.0.0.1:8000
 
 # Postcodes.io API for Address Lookup (free service)
 POSTCODES_API_URL=https://api.postcodes.io
@@ -142,7 +142,7 @@ Generated files and estimates are stored in the `storage/app/` directory. Make s
 
 ## API Integration
 
-The application integrates with an external API running on port 8001. Ensure the API is running and properly configured in your `.env` file.
+The application integrates with an external API running on port 8000. Ensure the API is running and properly configured in your `.env` file.
 
 ## Address Lookup Integration
 
@@ -219,6 +219,87 @@ COUCHDB_ESTIMATES_URL=http://admin:password@localhost:5984/window_estimates
 - **OfflineEstimateService**: Offline estimate creation
 - **LocalPricingEngine**: Client-side pricing calculations
 - **PWAService**: Progressive Web App functionality
+
+## 🔧 Troubleshooting
+
+### **CORS Issues**
+
+If you encounter CORS errors like:
+
+```text
+Access to script at 'http://127.0.0.1:5173/...' from origin 'http://0.0.0.0:8888' has been blocked by CORS policy
+```
+
+**Solution:**
+
+1. **Use the development script** (recommended):
+
+   ```bash
+   ./dev-server.sh start
+   ```
+
+2. **Manual setup**:
+
+   ```bash
+   # Terminal 1: Start Laravel server
+   php artisan serve --host=0.0.0.0 --port=8888
+
+   # Terminal 2: Start Vite server
+   npm run dev
+   ```
+
+3. **Update your .env file** to match your setup:
+
+   ```env
+   APP_URL=http://0.0.0.0:8888
+   VITE_DEV_SERVER_URL=http://0.0.0.0:5173
+   ```
+
+### **Common Issues**
+
+**Port conflicts:**
+
+```bash
+# Kill processes on specific ports
+lsof -ti:8888 | xargs kill -9
+lsof -ti:5173 | xargs kill -9
+```
+
+**Node modules issues:**
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Vite cache issues:**
+
+```bash
+rm -rf node_modules/.vite
+npm run dev
+```
+
+**Database issues:**
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+### **Development Server Commands**
+
+```bash
+# Start both servers with CORS configuration
+./dev-server.sh start
+
+# Stop all development servers
+./dev-server.sh stop
+
+# Restart servers
+./dev-server.sh restart
+
+# Check server status
+./dev-server.sh status
+```
 
 ## License
 

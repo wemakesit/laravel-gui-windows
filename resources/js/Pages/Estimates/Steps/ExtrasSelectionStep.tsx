@@ -1,14 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ExtrasForm from '../Components/ExtrasForm';
-
-interface ExtrasSelectionStepProps {
-  windows: any[];
-  extras: any[];
-  updateWindow: (index: number, window: any) => void;
-  currentWindow: number | null;
-  setCurrentWindow: (index: number | null) => void;
-  openModal: (modalData: any) => void;
-}
+import { ExtrasSelectionStepProps } from '@/types/wizard';
 
 export default function ExtrasSelectionStep({
   windows,
@@ -17,6 +9,7 @@ export default function ExtrasSelectionStep({
   currentWindow,
   setCurrentWindow,
   openModal,
+  validateStep,
 }: ExtrasSelectionStepProps) {
   const handleAddExtras = (index: number) => {
     setCurrentWindow(index);
@@ -42,6 +35,15 @@ export default function ExtrasSelectionStep({
   const closeModal = () => {
     openModal(null);
   };
+
+  // Validation effect - extras are optional, so this step is always valid if there are windows
+  useEffect(() => {
+    if (validateStep) {
+      // The extras step is valid as long as there are windows (extras are optional)
+      const isValid = windows.length > 0;
+      validateStep(4, isValid);
+    }
+  }, [windows, validateStep]);
 
   // Calculate total extras cost for a window
   const calculateExtrasTotal = window => {

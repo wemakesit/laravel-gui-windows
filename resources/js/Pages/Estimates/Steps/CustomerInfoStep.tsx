@@ -17,11 +17,7 @@ interface AddressOption {
   text: string;
 }
 
-interface CustomerInfoStepProps {
-  customerInfo: CustomerInfo;
-  updateCustomerInfo: (data: CustomerInfo) => void;
-  validateStep: (step: number, isValid: boolean) => void;
-}
+import { CustomerInfoStepProps } from '@/types/wizard';
 
 interface FormErrors {
   first_name?: string;

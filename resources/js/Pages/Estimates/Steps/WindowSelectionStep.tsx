@@ -1,37 +1,7 @@
 // React is used implicitly for JSX
-import React from 'react';
+import React, { useEffect } from 'react';
 import WindowForm from '../Components/WindowForm';
-
-interface Window {
-  room: string;
-  type: string;
-  quantity: number;
-  cost: number;
-  glass_specification?: string;
-  paint_finish?: string;
-  hardware_finish?: string;
-  extras?: any[];
-  options?: number;
-  additional_info?: string;
-  [key: string]: any;
-}
-
-interface WindowType {
-  Type: string;
-  Description?: string;
-  Cost?: number;
-  BasePrice?: number;
-}
-
-interface WindowSelectionStepProps {
-  windows: Window[];
-  windowTypes: WindowType[] | { window_types: WindowType[] } | any;
-  addWindow: (window: Window) => void;
-  updateWindow: (index: number, window: Window) => void;
-  removeWindow: (index: number) => void;
-  openModal: (modalData: any) => void;
-  setCurrentWindow: (index: number | null) => void;
-}
+import { WindowItem, WindowType, WindowSelectionStepProps } from '@/types/wizard';
 
 export default function WindowSelectionStep({
   windows,
@@ -41,7 +11,16 @@ export default function WindowSelectionStep({
   removeWindow,
   openModal,
   setCurrentWindow,
+  validateStep,
 }: WindowSelectionStepProps) {
+  // Validation effect
+  useEffect(() => {
+    if (validateStep) {
+      const isValid = windows.length > 0;
+      validateStep(2, isValid);
+    }
+  }, [windows, validateStep]);
+
   const handleAddWindow = () => {
     setCurrentWindow(null);
 

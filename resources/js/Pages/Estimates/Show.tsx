@@ -1,24 +1,147 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import { route } from 'ziggy-js';
+import { pouchDBService } from '@/Services/PouchDBService';
 
 interface EstimateShowProps {
-  estimate: {
-    id: number;
-    reference_number: string;
-    customer_name: string;
-    customer_email: string;
-    customer_phone: string;
-    customer_address: string;
-    additional_info?: string;
-    window_count: number;
-    total_amount: number;
-    created_at: string;
-    has_file: boolean;
-    estimate_data?: any;
-  };
+  estimateId: string;
+  usePouchDB?: boolean;
 }
 
-export default function Show({ estimate }: EstimateShowProps) {
+interface EstimateData {
+  _id: string;
+  reference_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  customer_address: string;
+  additional_info?: string;
+  window_count: number;
+  total_amount: number;
+  created_at: string;
+  has_file: boolean;
+  estimate_data?: any;
+}
+
+export default function Show({ estimateId, usePouchDB = false }: EstimateShowProps) {
+  const [estimate, setEstimate] = useState<EstimateData | null>(null);
+  const [loading, setLoading] = useState(usePouchDB);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  useEffect(() => {
+    if (usePouchDB) {
+      loadEstimateFromPouchDB();
+    }
+  }, [usePouchDB, estimateId]);
+
+  const loadEstimateFromPouchDB = async () => {
+    try {
+      setLoading(true);
+      console.log('Loading estimate from PouchDB:', estimateId);
+      const doc = await pouchDBService.getEstimate(estimateId);
+
+      // Map PouchDB data to expected format
+      const estimateData: EstimateData = {
+        _id: doc._id,
+        reference_number: doc._id, // Use _id as reference number
+        customer_name: doc.customerName,
+        customer_email: doc.customerEmail,
+        customer_phone: doc.customerPhone,
+        customer_address: doc.customerAddress,
+        window_count: doc.windows ? doc.windows.length : 0,
+        total_amount: doc.totalPrice,
+        created_at: new Date(doc.createdAt).toLocaleDateString('en-GB'),
+        has_file: (doc as any)._attachments && Object.keys((doc as any)._attachments).length > 0,
+        estimate_data: doc,
+      };
+
+      setEstimate(estimateData);
+    } catch (error) {
+      console.error('Error loading estimate from PouchDB:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+
+    try {
+      const response = await fetch(`/estimates/${estimate._id}/generate-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Trigger download
+        if (result.download_url) {
+          window.location.href = result.download_url;
+        }
+
+        // Refresh the page to show updated status
+        window.location.reload();
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('An error occurred while generating the PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Head title="Loading Estimate..." />
+        <div className='py-12'>
+          <div className='max-w-4xl mx-auto sm:px-6 lg:px-8'>
+            <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
+              <div className='p-6 text-gray-900'>
+                <div className='text-center'>
+                  <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto'></div>
+                  <p className='mt-4 text-gray-600'>Loading estimate...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (!estimate) {
+    return (
+      <>
+        <Head title="Estimate Not Found" />
+        <div className='py-12'>
+          <div className='max-w-4xl mx-auto sm:px-6 lg:px-8'>
+            <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
+              <div className='p-6 text-gray-900'>
+                <div className='text-center'>
+                  <h1 className='text-2xl font-bold text-gray-900 mb-4'>Estimate Not Found</h1>
+                  <p className='text-gray-600 mb-6'>The estimate you're looking for could not be found.</p>
+                  <Link
+                    href={route('estimates.index')}
+                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
+                  >
+                    ← Back to Estimates
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Head title={`Window Estimate ${estimate.reference_number}`} />
@@ -43,18 +166,26 @@ export default function Show({ estimate }: EstimateShowProps) {
                     ← Back to Estimates
                   </Link>
                   <Link
-                    href={route('estimates.load', estimate.id)}
+                    href={route('estimates.load', estimate._id)}
                     className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'
                   >
                     Edit Estimate
                   </Link>
-                  {estimate.has_file && (
+                  {estimate.has_file ? (
                     <Link
-                      href={route('estimates.download', estimate.id)}
+                      href={route('estimates.download', estimate._id)}
                       className='px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors'
                     >
                       Download PDF
                     </Link>
+                  ) : (
+                    <button
+                      onClick={handleGeneratePdf}
+                      disabled={isGeneratingPdf}
+                      className='px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                    >
+                      {isGeneratingPdf ? 'Generating...' : 'Generate PDF'}
+                    </button>
                   )}
                 </div>
               </div>
@@ -247,18 +378,26 @@ export default function Show({ estimate }: EstimateShowProps) {
               {/* Action Buttons */}
               <div className='mt-8 flex justify-center space-x-4'>
                 <Link
-                  href={route('estimates.load', estimate.id)}
+                  href={route('estimates.load', estimate._id)}
                   className='px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors'
                 >
                   Edit This Estimate
                 </Link>
-                {estimate.has_file && (
+                {estimate.has_file ? (
                   <Link
-                    href={route('estimates.download', estimate.id)}
+                    href={route('estimates.download', estimate._id)}
                     className='px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors'
                   >
                     Download PDF
                   </Link>
+                ) : (
+                  <button
+                    onClick={handleGeneratePdf}
+                    disabled={isGeneratingPdf}
+                    className='px-6 py-3 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {isGeneratingPdf ? 'Generating PDF...' : 'Generate PDF'}
+                  </button>
                 )}
                 <Link
                   href={route('estimates.create')}

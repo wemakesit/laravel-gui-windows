@@ -3,6 +3,7 @@
  */
 
 import { indexedDBService, EstimateRecord } from './IndexedDBService';
+import { Workbox } from 'workbox-window';
 
 export interface PWAStatus {
   isOnline: boolean;
@@ -23,6 +24,7 @@ export interface EstimateData {
 }
 
 class PWAService {
+  private wb: Workbox | null = null;
   private serviceWorker: ServiceWorker | null = null;
   private installPrompt: any = null;
   private onlineStatusCallbacks: ((isOnline: boolean) => void)[] = [];
@@ -39,30 +41,37 @@ class PWAService {
   private async init() {
     console.log('PWA: Initializing PWA Service...');
 
-    // Register service worker
+    // Register service worker using Workbox (check if sw.js exists)
     if ('serviceWorker' in navigator) {
       try {
-        console.log('PWA: Registering service worker...');
-        const registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/',
-        });
-        console.log(
-          'PWA: Service Worker registered successfully:',
-          registration
-        );
+        console.log('PWA: Registering service worker with Workbox...');
+        this.wb = new Workbox('/sw.js');
 
-        // Wait for service worker to be ready
-        const serviceWorker = await navigator.serviceWorker.ready;
-        this.serviceWorker = serviceWorker.active;
-
-        // Listen for service worker updates
-        registration.addEventListener('updatefound', () => {
-          console.log('PWA: Service Worker update found');
-          this.handleServiceWorkerUpdate(registration);
+        this.wb.addEventListener('installed', (event) => {
+          console.log('PWA: Service worker installed', event);
         });
+
+        this.wb.addEventListener('waiting', (event) => {
+          console.log('PWA: Service worker waiting', event);
+          // Show update available notification
+        });
+
+        this.wb.addEventListener('controlling', (event) => {
+          console.log('PWA: Service worker controlling', event);
+          window.location.reload();
+        });
+
+        await this.wb.register();
+        console.log('PWA: Service Worker registered successfully with Workbox');
+
+        // Get the service worker instance
+        const registration = await navigator.serviceWorker.ready;
+        this.serviceWorker = registration.active;
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
       }
+    } else {
+      console.log('PWA: Service worker not supported in this browser');
     }
 
     // Listen for online/offline events

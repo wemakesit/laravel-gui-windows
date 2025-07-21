@@ -1,16 +1,5 @@
-import React, { useState } from 'react';
-
-interface ReviewStepProps {
-  formData: any;
-  windowTypes: any;
-  extras: any;
-  finishes: any;
-  companyInfo: any;
-  pdfTextConfig: any;
-  options: any;
-  updateFormData: (section: string, data: any) => void;
-  submitEstimate: () => void;
-}
+import React, { useState, useEffect } from 'react';
+import { ReviewStepProps } from '@/types/wizard';
 
 export default function ReviewStep({
   formData,
@@ -22,6 +11,7 @@ export default function ReviewStep({
   options,
   updateFormData,
   submitEstimate,
+  validateStep,
 }: ReviewStepProps) {
   // Safety checks for required data
   if (!formData) {
@@ -43,6 +33,19 @@ export default function ReviewStep({
   const [selectedCaveats, setSelectedCaveats] = useState(
     safeFormData.selected_caveats || {}
   );
+
+  // Validation effect - review step is valid if we have customer info and windows
+  useEffect(() => {
+    if (validateStep) {
+      const hasCustomerInfo = formData.customerInfo &&
+        formData.customerInfo.first_name &&
+        formData.customerInfo.last_name &&
+        formData.customerInfo.email;
+      const hasWindows = formData.windows && formData.windows.length > 0;
+      const isValid = hasCustomerInfo && hasWindows;
+      validateStep(5, isValid);
+    }
+  }, [formData, validateStep]);
 
   const handleCaveatToggle = (caveat: string) => {
     const newSelectedCaveats: Record<string, boolean> = { ...selectedCaveats };

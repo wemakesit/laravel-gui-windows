@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Estimate;
-use App\Models\EstimateFile;
+
 use App\Services\ApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -44,7 +43,7 @@ class EstimateCreateController extends Controller
     }
 
     /**
-     * Generate and save the estimate.
+     * Generate and save the estimate locally (no PDF generation yet).
      */
     public function generate(Request $request)
     {
@@ -52,7 +51,12 @@ class EstimateCreateController extends Controller
             // Validate the request
             $validated = $request->validate([
                 'customerInfo' => 'required|array',
-                'windows' => 'required|array',
+                'customerInfo.first_name' => 'required|string',
+                'customerInfo.last_name' => 'required|string',
+                'customerInfo.email' => 'required|email',
+                'customerInfo.phone' => 'required|string',
+                'customerInfo.address' => 'required|string',
+                'windows' => 'required|array|min:1',
                 'selectedCaveats' => 'array',
                 'companyInfo' => 'required|array',
             ]);
@@ -65,56 +69,40 @@ class EstimateCreateController extends Controller
                 STR_PAD_LEFT
             );
 
-            // Calculate totals
+            // Calculate totals from windows data
             $windowCount = count($validated['windows']);
-            $totalAmount = 0; // This would be calculated based on your business logic
+            $totalAmount = $this->calculateTotalAmount($validated['windows']);
 
-            // Create the estimate record
-            $estimate = Estimate::create([
+            // Create customer name
+            $customerName = trim(
+                ($validated['customerInfo']['title'] ?? '') . ' ' .
+                $validated['customerInfo']['first_name'] . ' ' .
+                $validated['customerInfo']['last_name']
+            );
+
+            // Prepare estimate data for PouchDB
+            $estimateData = [
+                'type' => 'estimate',
                 'reference_number' => $referenceNumber,
-                'customer_name' => $validated['customerInfo']['name'] ?? '',
-                'customer_email' => $validated['customerInfo']['email'] ?? '',
-                'customer_phone' => $validated['customerInfo']['phone'] ?? '',
-                'customer_address' => $validated['customerInfo']['address'] ?? '',
-                'additional_info' => $validated['customerInfo']['additionalInfo'] ?? null,
+                'customer_name' => $customerName,
+                'customer_email' => $validated['customerInfo']['email'],
+                'customer_phone' => $validated['customerInfo']['phone'],
+                'customer_address' => $validated['customerInfo']['address'],
+                'additional_info' => $validated['customerInfo']['additional_info'] ?? null,
                 'window_count' => $windowCount,
                 'total_amount' => $totalAmount,
                 'estimate_data' => $validated,
-            ]);
+                'created_at' => now()->toISOString(),
+                'updated_at' => now()->toISOString(),
+            ];
 
-            // Generate PDF via API
-            $pdfResponse = $this->apiService->generateEstimate($validated);
-
-            if ($pdfResponse && isset($pdfResponse['success']) && $pdfResponse['success']) {
-                // Save the PDF file
-                $filename = $referenceNumber.'.pdf';
-                $path = 'estimates/'.$filename;
-
-                if (isset($pdfResponse['pdf_content'])) {
-                    Storage::put($path, base64_decode($pdfResponse['pdf_content']));
-
-                    // Create file record
-                    EstimateFile::create([
-                        'estimate_id' => $estimate->id,
-                        'filename' => $filename,
-                        'path' => $path,
-                        'mime_type' => 'application/pdf',
-                        'size' => Storage::size($path),
-                    ]);
-                }
-
-                return response()->json([
-                    'success' => true,
-                    'estimate_id' => $estimate->id,
-                    'reference_number' => $referenceNumber,
-                    'download_url' => route('estimates.download', $estimate->id),
-                ]);
-            }
-
+            // Return success with estimate data for PouchDB storage
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to generate PDF',
-            ], 500);
+                'success' => true,
+                'estimate_data' => $estimateData,
+                'reference_number' => $referenceNumber,
+                'message' => 'Estimate data prepared for PouchDB storage',
+            ]);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -122,5 +110,28 @@ class EstimateCreateController extends Controller
                 'message' => 'An error occurred: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Calculate total amount from windows data.
+     */
+    private function calculateTotalAmount(array $windows): float
+    {
+        $total = 0;
+
+        foreach ($windows as $window) {
+            $windowTotal = ($window['cost'] ?? 0) * ($window['quantity'] ?? 1);
+
+            // Add extras cost
+            if (isset($window['extras']) && is_array($window['extras'])) {
+                foreach ($window['extras'] as $extra) {
+                    $windowTotal += ($extra['cost'] ?? 0);
+                }
+            }
+
+            $total += $windowTotal;
+        }
+
+        return $total;
     }
 }

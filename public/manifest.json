@@ -60,61 +60,25 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Dashboard view on tablet"
-    },
-    {
-      "src": "/screenshots/wizard-narrow.png",
-      "sizes": "720x1280",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Estimate wizard on mobile"
-    }
-  ],
+
   "shortcuts": [
     {
       "name": "Create New Estimate",
       "short_name": "New Estimate",
       "description": "Start creating a new window estimate",
-      "url": "/estimates/create",
-      "icons": [
-        {
-          "src": "/icons/shortcut-new.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "/estimates/create"
     },
     {
       "name": "View Estimates",
       "short_name": "Estimates",
       "description": "View all window estimates",
-      "url": "/estimates",
-      "icons": [
-        {
-          "src": "/icons/shortcut-list.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "/estimates"
     },
     {
       "name": "Settings",
       "short_name": "Settings",
       "description": "Configure system settings",
-      "url": "/settings",
-      "icons": [
-        {
-          "src": "/icons/shortcut-settings.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "url": "/settings"
     }
   ],
   "prefer_related_applications": false,

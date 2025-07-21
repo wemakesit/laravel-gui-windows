@@ -9,6 +9,9 @@ import { createRoot } from 'react-dom/client';
 // Initialize PWA Service
 import { pwaService } from './Services/PWAService';
 
+// Register service worker from Vite PWA plugin
+import { registerSW } from 'virtual:pwa-register';
+
 // Add type augmentation for import.meta
 interface ImportMetaEnv {
   VITE_APP_NAME?: string;
@@ -23,6 +26,20 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Log PWA initialization
 console.log('App: PWA Service initialized', pwaService);
+
+// Register service worker for PWA functionality
+if ('serviceWorker' in navigator) {
+  registerSW({
+    onNeedRefresh() {
+      console.log('PWA: App update available');
+      // You can show a toast or modal here to ask user to refresh
+    },
+    onOfflineReady() {
+      console.log('PWA: App ready to work offline');
+      // You can show a toast here to inform user that app is ready for offline use
+    },
+  });
+}
 
 createInertiaApp({
   title: (title: string) => `${title} - ${appName}`,

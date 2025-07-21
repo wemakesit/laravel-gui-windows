@@ -102,7 +102,10 @@ class IndexedDBService {
       const transaction = this.db.transaction(['estimates'], 'readonly');
       const store = transaction.objectStore('estimates');
       const index = store.index('synced');
-      const request = index.getAll(false);
+
+      // Use IDBKeyRange to query for records where synced = false
+      const keyRange = IDBKeyRange.only(false);
+      const request = index.getAll(keyRange);
 
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);

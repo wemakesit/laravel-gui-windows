@@ -18,8 +18,7 @@ export default function WizardProgress({
     { number: 2, name: 'Window Selection' },
     { number: 3, name: 'Window Config' },
     { number: 4, name: 'Extras' },
-    { number: 5, name: 'Options' },
-    { number: 6, name: 'Review' },
+    { number: 5, name: 'Review' },
   ];
 
   return (

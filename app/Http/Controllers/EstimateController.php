@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Estimate;
 use App\Services\ApiService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -12,90 +13,59 @@ class EstimateController extends Controller
 {
     /**
      * Display the estimate listing page.
+     * Note: Estimates are now stored in PouchDB/CouchDB, not SQL database.
+     * The frontend will handle loading estimates from PouchDB.
      */
     public function index(): InertiaResponse
     {
-        $estimates = Estimate::with('file')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($estimate) {
-                return [
-                    'id' => $estimate->id,
-                    'reference_number' => $estimate->reference_number,
-                    'customer_name' => $estimate->customer_name,
-                    'created_at' => $estimate->created_at->format('d/m/Y H:i'),
-                    'window_count' => $estimate->window_count,
-                    'total_amount' => $estimate->total_amount,
-                    'has_file' => $estimate->file !== null,
-                ];
-            });
-
+        // Return empty estimates array since data comes from PouchDB
         return Inertia::render('Estimates/Index', [
-            'estimates' => $estimates,
+            'estimates' => [],
+            'usePouchDB' => true,
         ]);
     }
 
     /**
      * Display the specified estimate.
+     * Note: Estimates are now stored in PouchDB/CouchDB.
+     * The frontend will handle loading the estimate data.
      */
-    public function show(Estimate $estimate): InertiaResponse
+    public function show(string $id): InertiaResponse
     {
         return Inertia::render('Estimates/Show', [
-            'estimate' => [
-                'id' => $estimate->id,
-                'reference_number' => $estimate->reference_number,
-                'customer_name' => $estimate->customer_name,
-                'customer_email' => $estimate->customer_email,
-                'customer_phone' => $estimate->customer_phone,
-                'customer_address' => $estimate->customer_address,
-                'additional_info' => $estimate->additional_info,
-                'window_count' => $estimate->window_count,
-                'total_amount' => $estimate->total_amount,
-                'created_at' => $estimate->created_at->format('d/m/Y H:i'),
-                'has_file' => $estimate->file !== null,
-                'estimate_data' => $estimate->estimate_data,
-            ],
+            'estimateId' => $id,
+            'usePouchDB' => true,
         ]);
     }
 
     /**
      * Download the PDF file for the specified estimate.
+     * Note: PDF files are now handled through PouchDB/CouchDB attachments.
      */
-    public function download(Estimate $estimate): Response
+    public function download(string $id): Response
     {
-        $file = $estimate->file;
-
-        if (! $file || ! file_exists(storage_path('app/'.$file->path))) {
-            abort(404, 'File not found');
-        }
-
-        return response()->download(
-            storage_path('app/'.$file->path),
-            $file->filename,
-            ['Content-Type' => $file->mime_type]
-        );
+        // This will be handled by the frontend through PouchDB attachments
+        abort(404, 'PDF download is now handled through PouchDB attachments');
     }
 
     /**
      * Remove the specified estimate from storage.
+     * Note: Deletion is now handled through PouchDB/CouchDB.
      */
-    public function destroy(Estimate $estimate): \Illuminate\Http\RedirectResponse
+    public function destroy(string $id): JsonResponse
     {
-        // Delete associated file if it exists
-        if ($estimate->file && file_exists(storage_path('app/'.$estimate->file->path))) {
-            unlink(storage_path('app/'.$estimate->file->path));
-        }
-
-        $estimate->delete();
-
-        return redirect()->route('estimates.index')
-            ->with('success', 'Window estimate deleted successfully.');
+        // Return success - deletion will be handled by frontend PouchDB
+        return response()->json([
+            'success' => true,
+            'message' => 'Estimate deletion will be handled by PouchDB',
+        ]);
     }
 
     /**
      * Load an estimate into the wizard for editing.
+     * Note: Estimate data is now loaded from PouchDB/CouchDB.
      */
-    public function load(Estimate $estimate): InertiaResponse
+    public function load(string $id): InertiaResponse
     {
         // Get all the necessary data for the wizard
         $apiService = app(ApiService::class);
@@ -113,7 +83,21 @@ class EstimateController extends Controller
             'companyInfo' => $companyInfo,
             'pdfTextConfig' => $pdfTextConfig,
             'options' => $options,
-            'loadedEstimate' => $estimate->estimate_data,
+            'estimateId' => $id,
+            'usePouchDB' => true,
+        ]);
+    }
+
+    /**
+     * Generate PDF for an existing estimate.
+     * Note: PDF generation is now handled through PouchDB/CouchDB attachments.
+     */
+    public function generatePdf(string $id): JsonResponse
+    {
+        // PDF generation will be handled by the frontend through PouchDB
+        return response()->json([
+            'success' => true,
+            'message' => 'PDF generation is now handled through PouchDB attachments',
         ]);
     }
 }

@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react';
+import React, { ButtonHTMLAttributes, forwardRef } from 'react';
 import { useTouch } from '../Hooks/useTouch';
 
 interface TouchButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

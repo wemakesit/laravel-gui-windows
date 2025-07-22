@@ -1,4 +1,9 @@
-import { InputHTMLAttributes, forwardRef, useRef, useEffect } from 'react';
+import React, {
+  InputHTMLAttributes,
+  forwardRef,
+  useRef,
+  useEffect,
+} from 'react';
 import { useTouch } from '../Hooks/useTouch';
 
 interface TouchInputProps extends InputHTMLAttributes<HTMLInputElement> {

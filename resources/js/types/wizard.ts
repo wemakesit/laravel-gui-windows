@@ -2,6 +2,7 @@
  * Unified interfaces for the Estimate Wizard
  * This file consolidates all wizard-related type definitions
  */
+import React from 'react';
 
 export interface WindowItem {
   id?: string; // Optional for new windows, generated when saved

@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Touch-optimised styles for Surface Pro and tablet devices */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .touch-friendly {
+    padding: 12px 16px;
+  }
+
+  .surface-pro-optimised {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}

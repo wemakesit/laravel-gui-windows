@@ -1,0 +1,16 @@
+{
+  "name": "laravel-estimates-playwright",
+  "version": "1.0.0",
+  "description": "Playwright script to create estimates in Laravel application",
+  "main": "playwright-create-estimates.js",
+  "scripts": {
+    "create-estimates": "node playwright-create-estimates.js",
+    "install-playwright": "npx playwright install"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "keywords": ["playwright", "laravel", "estimates", "automation"],
+  "author": "",
+  "license": "MIT"
+}

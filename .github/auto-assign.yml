@@ -1,0 +1,55 @@
+# Auto-assign configuration for pull requests
+# This file configures automatic reviewer assignment
+
+# Reviewers to be assigned to pull requests
+reviewers:
+  - wemakesit  # Repository owner
+
+# Number of reviewers to assign
+numberOfReviewers: 1
+
+# Skip draft pull requests
+skipDraftPR: true
+
+# Add assignees (same as reviewers in this case)
+addAssignees: true
+assignees:
+  - wemakesit
+
+# Add reviewers based on file changes
+# You can customize this based on your team structure
+fileBasedReviewers:
+  # PHP/Laravel files
+  '**/*.php':
+    - wemakesit
+  
+  # Frontend files
+  '**/*.tsx':
+    - wemakesit
+  '**/*.ts':
+    - wemakesit
+  '**/*.jsx':
+    - wemakesit
+  '**/*.js':
+    - wemakesit
+  
+  # Configuration files
+  '**/*.json':
+    - wemakesit
+  '**/*.yml':
+    - wemakesit
+  '**/*.yaml':
+    - wemakesit
+  
+  # Database files
+  '**/migrations/**':
+    - wemakesit
+  '**/seeders/**':
+    - wemakesit
+
+# Skip certain keywords in PR title/body
+skipKeywords:
+  - '[WIP]'
+  - '[DRAFT]'
+  - 'wip:'
+  - 'draft:'

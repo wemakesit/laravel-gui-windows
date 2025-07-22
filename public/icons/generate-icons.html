@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+</head>
+<body>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <div id="output"></div>
+
+    <script>
+        // Simple icon generator for PWA
+        const sizes = [16, 32, 57, 60, 72, 76, 96, 114, 120, 128, 144, 152, 180, 192, 384, 512];
+        
+        function generateIcon(size) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Background
+            ctx.fillStyle = '#2563eb'; // Blue theme color
+            ctx.fillRect(0, 0, size, size);
+            
+            // Window icon (simplified)
+            const margin = size * 0.2;
+            const windowSize = size - (margin * 2);
+            
+            // Outer window frame
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(margin, margin, windowSize, windowSize);
+            
+            // Inner window panes
+            ctx.fillStyle = '#2563eb';
+            const paneMargin = margin + (windowSize * 0.1);
+            const paneSize = (windowSize * 0.8) / 2 - (windowSize * 0.05);
+            
+            // Top left pane
+            ctx.fillRect(paneMargin, paneMargin, paneSize, paneSize);
+            
+            // Top right pane
+            ctx.fillRect(paneMargin + paneSize + (windowSize * 0.1), paneMargin, paneSize, paneSize);
+            
+            // Bottom left pane
+            ctx.fillRect(paneMargin, paneMargin + paneSize + (windowSize * 0.1), paneSize, paneSize);
+            
+            // Bottom right pane
+            ctx.fillRect(paneMargin + paneSize + (windowSize * 0.1), paneMargin + paneSize + (windowSize * 0.1), paneSize, paneSize);
+            
+            return canvas.toDataURL('image/png');
+        }
+        
+        function downloadIcon(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+        }
+        
+        // Generate all icon sizes
+        sizes.forEach(size => {
+            const dataUrl = generateIcon(size);
+            const filename = `icon-${size}x${size}.png`;
+            
+            // Create download link
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <img src="${dataUrl}" style="width: 64px; height: 64px; margin: 5px;">
+                <a href="${dataUrl}" download="${filename}">${filename}</a>
+            `;
+            document.getElementById('output').appendChild(div);
+        });
+        
+        // Auto-download all icons (comment out if not needed)
+        // sizes.forEach(size => {
+        //     setTimeout(() => {
+        //         const dataUrl = generateIcon(size);
+        //         downloadIcon(dataUrl, `icon-${size}x${size}.png`);
+        //     }, size * 10); // Stagger downloads
+        // });
+    </script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+// React is used implicitly for JSX
+import React, { useEffect } from 'react';
+import WindowForm from '../Components/WindowForm';
+import { WindowItem, WindowType, WindowSelectionStepProps } from '@/types/wizard';
+
+export default function WindowSelectionStep({
+  windows,
+  windowTypes,
+  addWindow,
+  updateWindow,
+  removeWindow,
+  openModal,
+  setCurrentWindow,
+  validateStep,
+}: WindowSelectionStepProps) {
+  // Validation effect
+  useEffect(() => {
+    if (validateStep) {
+      const isValid = windows.length > 0;
+      validateStep(2, isValid);
+    }
+  }, [windows, validateStep]);
+
+  const handleAddWindow = () => {
+    setCurrentWindow(null);
+
+    // Ensure windowTypes is properly formatted
+    let formattedWindowTypes: { window_types: WindowType[] };
+
+    if (!windowTypes) {
+      console.warn('WindowSelectionStep: windowTypes is undefined or null');
+      formattedWindowTypes = { window_types: [] };
+    } else if (Array.isArray(windowTypes)) {
+      formattedWindowTypes = { window_types: windowTypes };
+    } else if (
+      typeof windowTypes === 'object' &&
+      'window_types' in windowTypes &&
+      Array.isArray(windowTypes.window_types)
+    ) {
+      formattedWindowTypes = windowTypes as { window_types: WindowType[] };
+    } else {
+      console.warn(
+        'WindowSelectionStep: windowTypes has unexpected format',
+        windowTypes
+      );
+      formattedWindowTypes = { window_types: [] };
+    }
+
+    const content = (
+      <WindowForm
+        windowTypes={formattedWindowTypes}
+        onSave={windowData => {
+          addWindow(windowData);
+          closeModal();
+        }}
+        onCancel={closeModal}
+      />
+    );
+
+    openModal({
+      title: 'Add New Window',
+      content,
+    });
+  };
+
+  const handleEditWindow = (index: number) => {
+    setCurrentWindow(index);
+
+    // Ensure windowTypes is properly formatted
+    let formattedWindowTypes: { window_types: WindowType[] };
+
+    if (!windowTypes) {
+      console.warn('WindowSelectionStep: windowTypes is undefined or null');
+      formattedWindowTypes = { window_types: [] };
+    } else if (Array.isArray(windowTypes)) {
+      formattedWindowTypes = { window_types: windowTypes };
+    } else if (
+      typeof windowTypes === 'object' &&
+      'window_types' in windowTypes &&
+      Array.isArray(windowTypes.window_types)
+    ) {
+      formattedWindowTypes = windowTypes as { window_types: WindowType[] };
+    } else {
+      console.warn(
+        'WindowSelectionStep: windowTypes has unexpected format',
+        windowTypes
+      );
+      formattedWindowTypes = { window_types: [] };
+    }
+
+    const content = (
+      <WindowForm
+        windowData={windows[index]}
+        windowTypes={formattedWindowTypes}
+        onSave={windowData => {
+          updateWindow(index, windowData);
+          closeModal();
+        }}
+        onCancel={closeModal}
+      />
+    );
+
+    openModal({
+      title: 'Edit Window',
+      content,
+    });
+  };
+
+  const closeModal = () => {
+    openModal(null);
+  };
+
+  return (
+    <div className='space-y-6'>
+      <h2 className='text-xl font-semibold'>Window Selection</h2>
+      <p className='text-gray-600'>Add windows to your quotation.</p>
+
+      {windows.length > 0 ? (
+        <div className='mt-4 space-y-4'>
+          <table className='min-w-full divide-y divide-gray-200'>
+            <thead className='bg-gray-50'>
+              <tr>
+                <th
+                  scope='col'
+                  className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+                >
+                  Room
+                </th>
+                <th
+                  scope='col'
+                  className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+                >
+                  Type
+                </th>
+                <th
+                  scope='col'
+                  className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+                >
+                  Quantity
+                </th>
+                <th
+                  scope='col'
+                  className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className='bg-white divide-y divide-gray-200'>
+              {windows.map((window, index) => (
+                <tr key={index}>
+                  <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
+                    {window.room}
+                  </td>
+                  <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
+                    {window.type}
+                  </td>
+                  <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
+                    {window.quantity}
+                  </td>
+                  <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
+                    <button
+                      type='button'
+                      onClick={() => handleEditWindow(index)}
+                      className='text-blue-600 hover:text-blue-900 mr-3'
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => removeWindow(index)}
+                      className='text-red-600 hover:text-red-900'
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className='text-center py-8 bg-gray-50 rounded-lg'>
+          <p className='text-gray-500'>No windows added yet.</p>
+        </div>
+      )}
+
+      <div className='mt-6'>
+        <button
+          type='button'
+          onClick={handleAddWindow}
+          className='inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+        >
+          <svg
+            className='-ml-1 mr-2 h-5 w-5'
+            xmlns='http://www.w3.org/2000/svg'
+            viewBox='0 0 20 20'
+            fill='currentColor'
+          >
+            <path
+              fillRule='evenodd'
+              d='M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z'
+              clipRule='evenodd'
+            />
+          </svg>
+          Add Window
+        </button>
+      </div>
+    </div>
+  );
+}

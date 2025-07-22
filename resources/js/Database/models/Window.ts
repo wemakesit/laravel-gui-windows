@@ -1,5 +1,14 @@
 import { Model } from '@nozbe/watermelondb';
-import { text, field, date, readonly, children, relation, writer, json } from '@nozbe/watermelondb/decorators';
+import {
+  text,
+  field,
+  date,
+  readonly,
+  children,
+  relation,
+  writer,
+  json,
+} from '@nozbe/watermelondb/decorators';
 import type { Query } from '@nozbe/watermelondb';
 import type Estimate from './Estimate';
 import type Photo from './Photo';
@@ -24,7 +33,7 @@ export default class Window extends Model {
   @field('glass_type') glassType!: string | null;
   @field('opening_type') openingType!: string | null;
   @field('notes') notes!: string | null;
-  @json('options', (json) => json) options!: string[] | null; // Selected options array
+  @json('options', json => json) options!: string[] | null; // Selected options array
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
@@ -62,7 +71,10 @@ export default class Window extends Model {
     });
   }
 
-  @writer async updatePricing(unitPrice: number | null, totalPrice: number | null) {
+  @writer async updatePricing(
+    unitPrice: number | null,
+    totalPrice: number | null
+  ) {
     await this.update(window => {
       window.unitPrice = unitPrice;
       window.totalPrice = totalPrice;
@@ -77,10 +89,12 @@ export default class Window extends Model {
     options?: string[] | null;
   }) {
     await this.update(window => {
-      if (config.windowType !== undefined) window.windowType = config.windowType;
+      if (config.windowType !== undefined)
+        window.windowType = config.windowType;
       if (config.finish !== undefined) window.finish = config.finish;
       if (config.glassType !== undefined) window.glassType = config.glassType;
-      if (config.openingType !== undefined) window.openingType = config.openingType;
+      if (config.openingType !== undefined)
+        window.openingType = config.openingType;
       if (config.options !== undefined) window.options = config.options;
     });
   }

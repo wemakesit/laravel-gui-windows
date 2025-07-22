@@ -397,7 +397,10 @@ export default function PWADebugger() {
               status={status.storage.indexedDB}
               label='IndexedDB'
             />
-            <StatusIndicator status={status.storage.watermelonDB} label='WatermelonDB' />
+            <StatusIndicator
+              status={status.storage.watermelonDB}
+              label='WatermelonDB'
+            />
             <div className='text-gray-600 text-xs space-y-1'>
               {status.storage.estimates !== undefined && (
                 <p>Estimates: {status.storage.estimates}</p>

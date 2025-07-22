@@ -191,10 +191,11 @@ const SyncTest: React.FC = () => {
         <div className='p-4 bg-blue-50 rounded-lg'>
           <h3 className='text-lg font-semibold mb-2'>About WatermelonDB</h3>
           <p className='text-sm text-gray-700'>
-            This component tests the WatermelonDB integration. WatermelonDB provides
-            offline-first data storage with better performance and TypeScript support
-            compared to traditional database solutions. Use the buttons above to test creating customers and
-            estimates, or clear all data to start fresh.
+            This component tests the WatermelonDB integration. WatermelonDB
+            provides offline-first data storage with better performance and
+            TypeScript support compared to traditional database solutions. Use
+            the buttons above to test creating customers and estimates, or clear
+            all data to start fresh.
           </p>
         </div>
       </div>

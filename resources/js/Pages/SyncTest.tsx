@@ -40,17 +40,13 @@ const SyncTestPage: React.FC = () => {
           <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
             <div className='text-center text-sm text-gray-500'>
               <p>
-                This page tests the WatermelonDB offline-first data storage functionality.
-                WatermelonDB provides fast, reactive database operations with automatic
-                IndexedDB persistence.
+                This page tests the WatermelonDB offline-first data storage
+                functionality. WatermelonDB provides fast, reactive database
+                operations with automatic IndexedDB persistence.
               </p>
               <div className='mt-2 space-x-4'>
-                <span>
-                  Storage: IndexedDB (browser native)
-                </span>
-                <span>
-                  Sync: Background API synchronization
-                </span>
+                <span>Storage: IndexedDB (browser native)</span>
+                <span>Sync: Background API synchronization</span>
                 <span>
                   Estimates DB:{' '}
                   <a

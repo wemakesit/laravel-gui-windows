@@ -23,7 +23,8 @@ export default function Index({
   estimates: serverEstimates = [],
   useOfflineMode = false,
 }: IndexProps) {
-  const [estimates, setEstimates] = useState<EstimateListItem[]>(serverEstimates);
+  const [estimates, setEstimates] =
+    useState<EstimateListItem[]>(serverEstimates);
   const [loading, setLoading] = useState(true);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
@@ -55,7 +56,7 @@ export default function Index({
       console.log('Raw WatermelonDB estimates:', estimates);
 
       const estimateList = await Promise.all(
-        estimates.map(async (estimate) => {
+        estimates.map(async estimate => {
           const customer = await estimate.customer.fetch();
           const windows = await estimate.windows.fetch();
 
@@ -88,8 +89,12 @@ export default function Index({
 
       if (estimate) {
         // Load from local database and show in modal
-        const customer = await watermelonDBService.getCustomer(estimate.customerId);
-        const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
+        const customer = await watermelonDBService.getCustomer(
+          estimate.customerId
+        );
+        const windows = await watermelonDBService.getWindowsByEstimate(
+          estimate.id
+        );
 
         const estimateData = {
           _id: estimate.id,
@@ -158,8 +163,10 @@ export default function Index({
                 preserveState: true,
                 preserveScroll: true,
                 onError: () => {
-                  console.warn('Failed to sync deletion to server, but local deletion succeeded');
-                }
+                  console.warn(
+                    'Failed to sync deletion to server, but local deletion succeeded'
+                  );
+                },
               });
             } catch (syncError) {
               console.warn('Failed to sync deletion to server:', syncError);

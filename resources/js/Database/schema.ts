@@ -78,7 +78,12 @@ export const schema = appSchema({
       name: 'photos',
       columns: [
         { name: 'estimate_id', type: 'string', isIndexed: true },
-        { name: 'window_id', type: 'string', isOptional: true, isIndexed: true },
+        {
+          name: 'window_id',
+          type: 'string',
+          isOptional: true,
+          isIndexed: true,
+        },
         { name: 'filename', type: 'string' },
         { name: 'file_path', type: 'string' },
         { name: 'file_size', type: 'number', isOptional: true },

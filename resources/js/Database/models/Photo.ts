@@ -1,5 +1,12 @@
 import { Model } from '@nozbe/watermelondb';
-import { text, field, date, readonly, relation, writer } from '@nozbe/watermelondb/decorators';
+import {
+  text,
+  field,
+  date,
+  readonly,
+  relation,
+  writer,
+} from '@nozbe/watermelondb/decorators';
 import type Estimate from './Estimate';
 import type Window from './Window';
 

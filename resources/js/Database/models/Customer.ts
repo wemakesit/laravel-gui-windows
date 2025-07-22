@@ -1,5 +1,12 @@
 import { Model } from '@nozbe/watermelondb';
-import { text, field, date, readonly, children, writer } from '@nozbe/watermelondb/decorators';
+import {
+  text,
+  field,
+  date,
+  readonly,
+  children,
+  writer,
+} from '@nozbe/watermelondb/decorators';
 import type { Query } from '@nozbe/watermelondb';
 import type Estimate from './Estimate';
 
@@ -48,30 +55,35 @@ export default class Customer extends Model {
   }
 
   // Writer methods
-  @writer async updateInfo(data: Partial<{
-    name: string;
-    email: string | null;
-    phone: string | null;
-    addressLine1: string | null;
-    addressLine2: string | null;
-    city: string | null;
-    county: string | null;
-    postcode: string | null;
-    country: string | null;
-    companyName: string | null;
-    notes: string | null;
-  }>) {
+  @writer async updateInfo(
+    data: Partial<{
+      name: string;
+      email: string | null;
+      phone: string | null;
+      addressLine1: string | null;
+      addressLine2: string | null;
+      city: string | null;
+      county: string | null;
+      postcode: string | null;
+      country: string | null;
+      companyName: string | null;
+      notes: string | null;
+    }>
+  ) {
     await this.update(customer => {
       if (data.name !== undefined) customer.name = data.name;
       if (data.email !== undefined) customer.email = data.email;
       if (data.phone !== undefined) customer.phone = data.phone;
-      if (data.addressLine1 !== undefined) customer.addressLine1 = data.addressLine1;
-      if (data.addressLine2 !== undefined) customer.addressLine2 = data.addressLine2;
+      if (data.addressLine1 !== undefined)
+        customer.addressLine1 = data.addressLine1;
+      if (data.addressLine2 !== undefined)
+        customer.addressLine2 = data.addressLine2;
       if (data.city !== undefined) customer.city = data.city;
       if (data.county !== undefined) customer.county = data.county;
       if (data.postcode !== undefined) customer.postcode = data.postcode;
       if (data.country !== undefined) customer.country = data.country;
-      if (data.companyName !== undefined) customer.companyName = data.companyName;
+      if (data.companyName !== undefined)
+        customer.companyName = data.companyName;
       if (data.notes !== undefined) customer.notes = data.notes;
     });
   }

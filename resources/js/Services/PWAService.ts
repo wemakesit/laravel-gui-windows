@@ -234,7 +234,7 @@ class PWAService {
       localStorage.setItem('cached_estimates', JSON.stringify(estimates));
 
       console.log(
-        'PWA: Estimate cached successfully in IndexedDB and localStorage'
+        'PWA: Estimate cached successfully in WatermelonDB and localStorage'
       );
     } catch (error) {
       console.error('PWA: Error caching estimate:', error);
@@ -246,7 +246,7 @@ class PWAService {
   }
 
   /**
-   * Get cached estimates from IndexedDB and localStorage
+   * Get cached estimates from WatermelonDB and localStorage
    */
   public async getLocalEstimates(): Promise<EstimateData[]> {
     try {

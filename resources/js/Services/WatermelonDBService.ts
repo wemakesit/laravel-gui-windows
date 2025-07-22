@@ -3,7 +3,13 @@
  */
 
 import { Q } from '@nozbe/watermelondb';
-import database, { Customer, Estimate, Window, Extra, Photo } from '../Database';
+import database, {
+  Customer,
+  Estimate,
+  Window,
+  Extra,
+  Photo,
+} from '../Database';
 import type { CustomerInfo, WindowItem } from '../types/wizard';
 
 export class WatermelonDBService {
@@ -56,7 +62,8 @@ export class WatermelonDBService {
   }
 
   async searchCustomers(searchTerm: string): Promise<Customer[]> {
-    return await this.db.get<Customer>('customers')
+    return await this.db
+      .get<Customer>('customers')
       .query(
         Q.or(
           Q.where('name', Q.like(`%${searchTerm}%`)),
@@ -70,11 +77,15 @@ export class WatermelonDBService {
   /**
    * Estimate operations
    */
-  async createEstimate(customerId: string, referenceNumber?: string): Promise<Estimate> {
+  async createEstimate(
+    customerId: string,
+    referenceNumber?: string
+  ): Promise<Estimate> {
     return await this.db.write(async () => {
       return await this.db.get<Estimate>('estimates').create(estimate => {
         estimate.customerId = customerId;
-        estimate.referenceNumber = referenceNumber || this.generateReferenceNumber();
+        estimate.referenceNumber =
+          referenceNumber || this.generateReferenceNumber();
         estimate.status = 'draft';
         estimate.isSynced = false;
       });
@@ -90,33 +101,33 @@ export class WatermelonDBService {
   }
 
   async getAllEstimates(): Promise<Estimate[]> {
-    return await this.db.get<Estimate>('estimates')
+    return await this.db
+      .get<Estimate>('estimates')
       .query(Q.sortBy('created_at', Q.desc))
       .fetch();
   }
 
   async getEstimatesByCustomer(customerId: string): Promise<Estimate[]> {
-    return await this.db.get<Estimate>('estimates')
-      .query(
-        Q.where('customer_id', customerId),
-        Q.sortBy('created_at', Q.desc)
-      )
+    return await this.db
+      .get<Estimate>('estimates')
+      .query(Q.where('customer_id', customerId), Q.sortBy('created_at', Q.desc))
       .fetch();
   }
 
   async getDraftEstimates(): Promise<Estimate[]> {
-    return await this.db.get<Estimate>('estimates')
-      .query(
-        Q.where('status', 'draft'),
-        Q.sortBy('updated_at', Q.desc)
-      )
+    return await this.db
+      .get<Estimate>('estimates')
+      .query(Q.where('status', 'draft'), Q.sortBy('updated_at', Q.desc))
       .fetch();
   }
 
   /**
    * Window operations
    */
-  async addWindowToEstimate(estimateId: string, windowData: WindowItem): Promise<Window> {
+  async addWindowToEstimate(
+    estimateId: string,
+    windowData: WindowItem
+  ): Promise<Window> {
     return await this.db.write(async () => {
       return await this.db.get<Window>('windows').create(window => {
         window.estimateId = estimateId;
@@ -135,12 +146,16 @@ export class WatermelonDBService {
   }
 
   async getWindowsByEstimate(estimateId: string): Promise<Window[]> {
-    return await this.db.get<Window>('windows')
+    return await this.db
+      .get<Window>('windows')
       .query(Q.where('estimate_id', estimateId))
       .fetch();
   }
 
-  async updateWindow(windowId: string, updates: Partial<WindowItem>): Promise<void> {
+  async updateWindow(
+    windowId: string,
+    updates: Partial<WindowItem>
+  ): Promise<void> {
     await this.db.write(async () => {
       const window = await this.db.get<Window>('windows').find(windowId);
       await window.update(w => {
@@ -151,7 +166,8 @@ export class WatermelonDBService {
         if (updates.quantity !== undefined) w.quantity = updates.quantity;
         if (updates.finish !== undefined) w.finish = updates.finish;
         if (updates.glassType !== undefined) w.glassType = updates.glassType;
-        if (updates.openingType !== undefined) w.openingType = updates.openingType;
+        if (updates.openingType !== undefined)
+          w.openingType = updates.openingType;
         if (updates.notes !== undefined) w.notes = updates.notes;
         if (updates.options !== undefined) w.options = updates.options;
       });
@@ -168,14 +184,17 @@ export class WatermelonDBService {
   /**
    * Photo operations
    */
-  async addPhoto(estimateId: string, photoData: {
-    filename: string;
-    filePath: string;
-    fileSize?: number;
-    mimeType?: string;
-    caption?: string;
-    windowId?: string;
-  }): Promise<Photo> {
+  async addPhoto(
+    estimateId: string,
+    photoData: {
+      filename: string;
+      filePath: string;
+      fileSize?: number;
+      mimeType?: string;
+      caption?: string;
+      windowId?: string;
+    }
+  ): Promise<Photo> {
     return await this.db.write(async () => {
       return await this.db.get<Photo>('photos').create(photo => {
         photo.estimateId = estimateId;
@@ -191,13 +210,15 @@ export class WatermelonDBService {
   }
 
   async getPhotosByEstimate(estimateId: string): Promise<Photo[]> {
-    return await this.db.get<Photo>('photos')
+    return await this.db
+      .get<Photo>('photos')
       .query(Q.where('estimate_id', estimateId))
       .fetch();
   }
 
   async getPhotosByWindow(windowId: string): Promise<Photo[]> {
-    return await this.db.get<Photo>('photos')
+    return await this.db
+      .get<Photo>('photos')
       .query(Q.where('window_id', windowId))
       .fetch();
   }

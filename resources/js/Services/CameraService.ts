@@ -3,7 +3,20 @@
  * Handles camera access, photo capture, and image processing
  */
 
-import { indexedDBService, PhotoRecord } from './IndexedDBService';
+import { watermelonDBService } from './WatermelonDBService';
+
+export interface PhotoRecord {
+  id: string;
+  estimateId: string;
+  windowId?: string;
+  filename: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  caption?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface CameraCapabilities {
   hasCamera: boolean;
@@ -157,33 +170,34 @@ class CameraService {
   }
 
   /**
-   * Save photo to IndexedDB
+   * Save photo to WatermelonDB
    */
   public async savePhoto(
     estimateId: string,
-    windowIndex: number,
+    windowId: string,
     blob: Blob,
     filename?: string
   ): Promise<string> {
-    const photoId = `photo-${estimateId}-${windowIndex}-${Date.now()}`;
-    const photoFilename = filename || `window-${windowIndex}-${Date.now()}.jpg`;
+    const photoId = `photo-${estimateId}-${windowId}-${Date.now()}`;
+    const photoFilename = filename || `window-${windowId}-${Date.now()}.jpg`;
+
+    // Convert blob to base64 for storage
+    const base64Data = await this.blobToBase64(blob);
 
     const photoRecord: PhotoRecord = {
       id: photoId,
       estimateId,
-      windowIndex,
-      blob,
+      windowId,
       filename: photoFilename,
-      timestamp: Date.now(),
-      synced: false,
-      metadata: {
-        size: blob.size,
-        type: blob.type,
-        // Width and height would be set if we extract them from the image
-      },
+      filePath: base64Data, // Store base64 data in filePath
+      fileSize: blob.size,
+      mimeType: blob.type,
+      caption: '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    await indexedDBService.savePhoto(photoRecord);
+    await watermelonDBService.addPhotoToEstimate(estimateId, photoRecord);
     console.log('CameraService: Photo saved:', photoId);
     return photoId;
   }
@@ -194,7 +208,7 @@ class CameraService {
   public async getPhotosForEstimate(
     estimateId: string
   ): Promise<PhotoRecord[]> {
-    return await indexedDBService.getPhotosForEstimate(estimateId);
+    return await watermelonDBService.getPhotosByEstimate(estimateId);
   }
 
   /**

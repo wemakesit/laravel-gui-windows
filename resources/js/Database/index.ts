@@ -11,24 +11,24 @@ const adapter = new LokiJSAdapter({
   useWebWorker: false, // Disable for now to avoid complexity
   useIncrementalIndexedDB: true, // Use IndexedDB for persistence
   dbName: 'window_estimates_db',
-  
+
   // Event handlers
-  onQuotaExceededError: (error) => {
+  onQuotaExceededError: error => {
     console.error('Database quota exceeded:', error);
     // TODO: Show user notification about storage space
   },
-  
-  onSetUpError: (error) => {
+
+  onSetUpError: error => {
     console.error('Database setup failed:', error);
     // TODO: Show user notification and offer to reload
   },
-  
+
   extraIncrementalIDBOptions: {
     onDidOverwrite: () => {
       console.warn('Database was overwritten by another tab');
       // TODO: Sync data and notify user
     },
-    
+
     onversionchange: () => {
       console.warn('Database was deleted in another tab');
       // TODO: Check if user is still logged in and reload if needed
@@ -40,13 +40,7 @@ const adapter = new LokiJSAdapter({
 // Create the database
 export const database = new Database({
   adapter,
-  modelClasses: [
-    Customer,
-    Estimate,
-    Window,
-    Extra,
-    Photo,
-  ],
+  modelClasses: [Customer, Estimate, Window, Extra, Photo],
 });
 
 export default database;

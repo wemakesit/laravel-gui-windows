@@ -1,5 +1,13 @@
 import { Model } from '@nozbe/watermelondb';
-import { text, field, date, readonly, children, relation, writer } from '@nozbe/watermelondb/decorators';
+import {
+  text,
+  field,
+  date,
+  readonly,
+  children,
+  relation,
+  writer,
+} from '@nozbe/watermelondb/decorators';
 import type { Query } from '@nozbe/watermelondb';
 import type Customer from './Customer';
 import type Window from './Window';
@@ -78,10 +86,14 @@ export default class Estimate extends Model {
     finalAmount?: number | null;
   }) {
     await this.update(estimate => {
-      if (amounts.totalAmount !== undefined) estimate.totalAmount = amounts.totalAmount;
-      if (amounts.discountAmount !== undefined) estimate.discountAmount = amounts.discountAmount;
-      if (amounts.vatAmount !== undefined) estimate.vatAmount = amounts.vatAmount;
-      if (amounts.finalAmount !== undefined) estimate.finalAmount = amounts.finalAmount;
+      if (amounts.totalAmount !== undefined)
+        estimate.totalAmount = amounts.totalAmount;
+      if (amounts.discountAmount !== undefined)
+        estimate.discountAmount = amounts.discountAmount;
+      if (amounts.vatAmount !== undefined)
+        estimate.vatAmount = amounts.vatAmount;
+      if (amounts.finalAmount !== undefined)
+        estimate.finalAmount = amounts.finalAmount;
     });
   }
 

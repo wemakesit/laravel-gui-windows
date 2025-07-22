@@ -80,7 +80,7 @@ class EstimateCreateController extends Controller
                 $validated['customerInfo']['last_name']
             );
 
-            // Prepare estimate data for PouchDB
+            // Prepare estimate data for WatermelonDB
             $estimateData = [
                 'type' => 'estimate',
                 'reference_number' => $referenceNumber,
@@ -96,12 +96,12 @@ class EstimateCreateController extends Controller
                 'updated_at' => now()->toISOString(),
             ];
 
-            // Return success with estimate data for PouchDB storage
+            // Return success with estimate data for WatermelonDB storage
             return response()->json([
                 'success' => true,
                 'estimate_data' => $estimateData,
                 'reference_number' => $referenceNumber,
-                'message' => 'Estimate data prepared for PouchDB storage',
+                'message' => 'Estimate data prepared for WatermelonDB storage',
             ]);
 
         } catch (\Exception $e) {

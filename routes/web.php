@@ -22,7 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/estimates/create', [EstimateCreateController::class, 'index'])->name('estimates.create');
     Route::post('/estimates/generate', [EstimateCreateController::class, 'generate'])->name('estimates.generate');
 
-    // Estimate Detail Routes - using string IDs instead of model binding for PouchDB compatibility
+    // Estimate Detail Routes - using string IDs for WatermelonDB compatibility
     Route::get('/estimates/{id}', [EstimateController::class, 'show'])->name('estimates.show');
     Route::post('/estimates/{id}/generate-pdf', [EstimateController::class, 'generatePdf'])->name('estimates.generate-pdf');
     Route::get('/estimates/{id}/download', [EstimateController::class, 'download'])->name('estimates.download');
@@ -40,7 +40,7 @@ Route::middleware('auth')->group(function () {
     // API Proxy Route - to avoid CORS issues when accessing the API directly from the browser
     Route::any('/api-proxy/{path?}', [SettingsController::class, 'proxyApiRequest'])->where('path', '.*')->name('api.proxy');
 
-    // Sync Test Route - for testing PouchDB sync functionality
+    // Storage Test Route - for testing WatermelonDB functionality
     Route::get('/sync-test', function () {
         return Inertia::render('SyncTest');
     })->name('sync.test');

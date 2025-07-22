@@ -311,9 +311,9 @@ async function createEstimate(page, data, estimateNumber) {
   console.log(`  - Generating estimate`);
   await page.click('button:has-text("Generate Estimate")');
 
-  // Wait for success and redirect to PouchDB-stored estimate
+  // Wait for success and redirect to WatermelonDB-stored estimate
   await page.waitForURL('**/estimates/**', { timeout: 15000 });
-  console.log(`  ✓ Estimate ${estimateNumber} created successfully and stored in PouchDB!`);
+  console.log(`  ✓ Estimate ${estimateNumber} created successfully and stored in WatermelonDB!`);
 
   await page.waitForTimeout(2000);
 }

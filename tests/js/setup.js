@@ -276,6 +276,118 @@ global.cancelAnimationFrame = jest.fn((id) => clearTimeout(id));
 global.requestIdleCallback = jest.fn((cb) => setTimeout(cb, 0));
 global.cancelIdleCallback = jest.fn((id) => clearTimeout(id));
 
+// WatermelonDB-specific mocks
+// Mock IndexedDB
+global.indexedDB = {
+  open: jest.fn(),
+  deleteDatabase: jest.fn(),
+  cmp: jest.fn(),
+};
+
+// Mock IDBKeyRange
+global.IDBKeyRange = {
+  bound: jest.fn(),
+  only: jest.fn(),
+  lowerBound: jest.fn(),
+  upperBound: jest.fn(),
+};
+
+// Mock crypto for UUID generation
+global.crypto = global.crypto || {};
+global.crypto.randomUUID = jest.fn(() => 'mock-uuid-1234-5678-9abc-def0');
+global.crypto.getRandomValues = jest.fn((array) => {
+  for (let i = 0; i < array.length; i++) {
+    array[i] = Math.floor(Math.random() * 256);
+  }
+  return array;
+});
+
+// Mock localStorage and sessionStorage
+const createStorageMock = () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+  length: 0,
+  key: jest.fn(),
+});
+
+global.localStorage = createStorageMock();
+global.sessionStorage = createStorageMock();
+
+// Mock navigator.onLine
+Object.defineProperty(navigator, 'onLine', {
+  value: true,
+  writable: true,
+});
+
+// WatermelonDB test utilities
+global.watermelonTestUtils = {
+  // Helper to create mock customer data
+  createMockCustomer: (overrides = {}) => ({
+    id: 'customer-1',
+    name: 'John Doe',
+    email: 'john@example.com',
+    phone: '01234567890',
+    addressLine1: '123 Test Street',
+    city: 'Test City',
+    postcode: 'TE1 2ST',
+    country: 'United Kingdom',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  }),
+
+  // Helper to create mock estimate data
+  createMockEstimate: (overrides = {}) => ({
+    id: 'estimate-1',
+    customerId: 'customer-1',
+    referenceNumber: 'EST-001',
+    status: 'draft',
+    totalAmount: 1000,
+    finalAmount: 1200,
+    isSynced: false,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  }),
+
+  // Helper to create mock window data
+  createMockWindow: (overrides = {}) => ({
+    id: 'window-1',
+    estimateId: 'estimate-1',
+    room: 'Living Room',
+    windowType: 'Casement',
+    width: 1200,
+    height: 1000,
+    quantity: 1,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  }),
+
+  // Helper to create mock database
+  createMockDatabase: () => ({
+    write: jest.fn((callback) => callback()),
+    get: jest.fn(),
+    unsafeResetDatabase: jest.fn(),
+  }),
+
+  // Helper to create mock collection
+  createMockCollection: () => ({
+    create: jest.fn(),
+    find: jest.fn(),
+    query: jest.fn(),
+    fetchCount: jest.fn(),
+  }),
+
+  // Helper to create mock query
+  createMockQuery: () => ({
+    fetch: jest.fn(),
+    fetchCount: jest.fn(),
+  }),
+};
+
 // Suppress React warnings in tests
 const originalError = console.error;
 beforeAll(() => {

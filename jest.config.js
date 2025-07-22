@@ -16,7 +16,17 @@ export default {
 
   // Transform files
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
+      presets: [
+        ['@babel/preset-env', { targets: { node: 'current' } }],
+        '@babel/preset-react',
+        '@babel/preset-typescript',
+      ],
+      plugins: [
+        ['@babel/plugin-proposal-decorators', { legacy: true }],
+        ['@babel/plugin-proposal-class-properties', { loose: true }],
+      ],
+    }],
   },
 
   // Module name mapping for aliases
@@ -28,9 +38,11 @@ export default {
   },
 
   // Coverage configuration
-  collectCoverage: false,
+  collectCoverage: true,
   collectCoverageFrom: [
-    'resources/js/**/*.{js,jsx,ts,tsx}',
+    'resources/js/Database/**/*.{js,ts}',
+    'resources/js/Services/WatermelonDBService.ts',
+    '!resources/js/Database/index.ts',
     '!resources/js/**/*.d.ts',
     '!resources/js/ziggy.js',
     '!resources/js/bootstrap.js',
@@ -42,10 +54,10 @@ export default {
   // Coverage thresholds
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
 

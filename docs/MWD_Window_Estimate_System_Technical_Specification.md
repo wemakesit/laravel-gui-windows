@@ -21,11 +21,11 @@ This document outlines the agreed scope, workflow, technology architecture, and 
 
 | Layer | Technology | Purpose/Role |
 | :-- | :-- | :-- |
-| Frontend | Electron + React | Main quoting interface. Stepwise wizard. Surface Pro optimised. |
-| Local Storage | PouchDB | Full offline capability, immediate access to all records. |
-| Cloud Sync | CouchDB | Background sync of estimates, catalogue and user data. |
-| Backend API | Python FastAPI | Pricing logic, validation, PDF/image packaging, sync controller. |
-| Media Storage | S3/Pouch/Couch | Stores all estimate images and final documents. |
+| Frontend | Laravel + Inertia.js + React | Main quoting interface. Stepwise wizard. Surface Pro optimised. |
+| Local Storage | WatermelonDB | Full offline capability, immediate access to all records. |
+| Cloud Sync | Laravel API | Background sync of estimates, catalogue and user data. |
+| Backend API | Laravel | Pricing logic, validation, PDF/image packaging, sync controller. |
+| Media Storage | Laravel Storage | Stores all estimate images and final documents. |
 | Address Lookup | Address lookup service | Reduces manual entry, ensures address accuracy. |
 | Product Data | Window/Product APIs | Provides up-to-date window types, extras, finishes. |
 

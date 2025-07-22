@@ -6,7 +6,7 @@ A comprehensive Laravel application with Inertia.js and React for window estimat
 
 ### **Core Functionality**
 - **Offline-First Architecture**: Create and manage estimates without internet connection
-- **PouchDB/CouchDB Sync**: Bidirectional data synchronisation with conflict resolution
+- **WatermelonDB Storage**: Fast, reactive local database with automatic persistence
 - **Progressive Web App (PWA)**: Installable app with service worker caching
 - **Touch-Optimised Interface**: Designed for Surface Pro and tablet devices
 - **Real-Time Pricing**: Dynamic pricing engine with VAT calculations
@@ -187,10 +187,10 @@ COUCHDB_ESTIMATES_URL=http://admin:password@localhost:5984/window_estimates
 
 ### **Key Features**
 - **Works Offline**: Create estimates without internet connection
-- **PouchDB Storage**: Local database with CouchDB sync
-- **Auto-Sync**: Data syncs automatically when online
-- **Force Sync**: Manual sync from Settings → Data Sync tab
-- **Status Monitoring**: Real-time sync status display
+- **WatermelonDB Storage**: Local database with IndexedDB persistence
+- **Background Sync**: Data syncs automatically with Laravel API when online
+- **Real-time Updates**: Reactive database with automatic UI updates
+- **Storage Monitoring**: Real-time storage statistics display
 
 ### **Data Management**
 - **Settings Page**: Configure window types, extras, finishes
@@ -207,14 +207,14 @@ COUCHDB_ESTIMATES_URL=http://admin:password@localhost:5984/window_estimates
 - **Tailwind CSS**: Utility-first styling
 - **Headless UI**: Accessible components
 
-### **Offline & Sync**
-- **PouchDB**: Local database storage
-- **CouchDB**: Remote database sync
+### **Offline & Storage**
+- **WatermelonDB**: Local database storage with reactive queries
+- **IndexedDB**: Browser-native persistence layer
 - **Service Worker**: Caching strategy
 - **PWA**: Progressive Web App features
 
 ### **Key Services**
-- **PouchDBService**: Database operations and sync
+- **WatermelonDBService**: Database operations and data management
 - **ConfigCacheService**: Configuration management
 - **OfflineEstimateService**: Offline estimate creation
 - **LocalPricingEngine**: Client-side pricing calculations

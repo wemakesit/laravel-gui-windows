@@ -1,13 +1,13 @@
 module.exports = {
   ci: {
     collect: {
-      // URLs to test (adjust based on your application routes)
+      // URLs to test (adjust based on application routes)
       url: [
         'http://localhost:8000',
         'http://localhost:8000/estimates',
         'http://localhost:8000/estimates/create',
       ],
-      startServerCommand: 'php artisan serve --port=8000 &',
+      startServerCommand: 'php artisan serve --port=8888 &',
       startServerReadyPattern: 'Development Server.*started',
       startServerReadyTimeout: 30000,
     },

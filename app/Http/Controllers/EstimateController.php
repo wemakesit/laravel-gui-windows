@@ -13,57 +13,57 @@ class EstimateController extends Controller
 {
     /**
      * Display the estimate listing page.
-     * Note: Estimates are now stored in PouchDB/CouchDB, not SQL database.
-     * The frontend will handle loading estimates from PouchDB.
+     * Note: Estimates are now stored in WatermelonDB locally, not SQL database.
+     * The frontend will handle loading estimates from WatermelonDB.
      */
     public function index(): InertiaResponse
     {
-        // Return empty estimates array since data comes from PouchDB
+        // Return empty estimates array since data comes from WatermelonDB
         return Inertia::render('Estimates/Index', [
             'estimates' => [],
-            'usePouchDB' => true,
+            'useOfflineMode' => true,
         ]);
     }
 
     /**
      * Display the specified estimate.
-     * Note: Estimates are now stored in PouchDB/CouchDB.
+     * Note: Estimates are now stored in WatermelonDB locally.
      * The frontend will handle loading the estimate data.
      */
     public function show(string $id): InertiaResponse
     {
         return Inertia::render('Estimates/Show', [
             'estimateId' => $id,
-            'usePouchDB' => true,
+            'useOfflineMode' => true,
         ]);
     }
 
     /**
      * Download the PDF file for the specified estimate.
-     * Note: PDF files are now handled through PouchDB/CouchDB attachments.
+     * Note: PDF files are now handled through WatermelonDB local storage.
      */
     public function download(string $id): Response
     {
-        // This will be handled by the frontend through PouchDB attachments
-        abort(404, 'PDF download is now handled through PouchDB attachments');
+        // This will be handled by the frontend through WatermelonDB local storage
+        abort(404, 'PDF download is now handled through WatermelonDB local storage');
     }
 
     /**
      * Remove the specified estimate from storage.
-     * Note: Deletion is now handled through PouchDB/CouchDB.
+     * Note: Deletion is now handled through WatermelonDB locally.
      */
     public function destroy(string $id): JsonResponse
     {
-        // Return success - deletion will be handled by frontend PouchDB
+        // Return success - deletion will be handled by frontend WatermelonDB
         return response()->json([
             'success' => true,
-            'message' => 'Estimate deletion will be handled by PouchDB',
+            'message' => 'Estimate deletion will be handled by WatermelonDB',
         ]);
     }
 
     /**
      * Load an estimate into the wizard for editing.
-     * Note: Estimate data is now loaded from PouchDB/CouchDB.
+     * Note: Estimate data is now loaded from WatermelonDB locally.
      */
     public function load(string $id): InertiaResponse
     {
@@ -84,20 +84,20 @@ class EstimateController extends Controller
             'pdfTextConfig' => $pdfTextConfig,
             'options' => $options,
             'estimateId' => $id,
-            'usePouchDB' => true,
+            'useOfflineMode' => true,
         ]);
     }
 
     /**
      * Generate PDF for an existing estimate.
-     * Note: PDF generation is now handled through PouchDB/CouchDB attachments.
+     * Note: PDF generation is now handled through WatermelonDB local storage.
      */
     public function generatePdf(string $id): JsonResponse
     {
-        // PDF generation will be handled by the frontend through PouchDB
+        // PDF generation will be handled by the frontend through WatermelonDB
         return response()->json([
             'success' => true,
-            'message' => 'PDF generation is now handled through PouchDB attachments',
+            'message' => 'PDF generation is now handled through WatermelonDB local storage',
         ]);
     }
 }

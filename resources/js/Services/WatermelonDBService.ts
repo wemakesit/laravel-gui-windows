@@ -1,6 +1,5 @@
 /**
  * WatermelonDB Service for offline-first data storage
- * Replaces PouchDBService with better TypeScript support and performance
  */
 
 import { Q } from '@nozbe/watermelondb';

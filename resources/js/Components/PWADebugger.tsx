@@ -70,7 +70,7 @@ export default function PWADebugger() {
           standalone: window.matchMedia('(display-mode: standalone)').matches,
         },
         storage: {
-          pouchDB: false,
+          watermelonDB: false,
           localStorage: false,
           indexedDB: false,
         },

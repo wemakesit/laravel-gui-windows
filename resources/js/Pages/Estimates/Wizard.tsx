@@ -9,7 +9,7 @@ import WindowConfigStep from './Steps/WindowConfigStep';
 import ExtrasSelectionStep from './Steps/ExtrasSelectionStep';
 import ReviewStep from './Steps/ReviewStep';
 import { usePWA } from '@/Hooks/usePWA';
-import { pouchDBService } from '@/Services/PouchDBService';
+import { watermelonDBService } from '@/Services/WatermelonDBService';
 import {
   WindowItem,
   CustomerInfo,
@@ -145,23 +145,34 @@ export default function Wizard({
       const customerName =
         `${customerInfo.first_name || ''} ${customerInfo.last_name || ''}`.trim();
 
-      // Save to PouchDB
-      const savedEstimate = await pouchDBService.saveEstimate({
-        customerName,
-        customerEmail: customerInfo.email || '',
-        customerPhone: customerInfo.phone || '',
-        customerAddress: customerInfo.address || '',
-        windows,
-        totalPrice: totalAmount,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'draft' as const,
+      // Save to WatermelonDB
+      const customer = await watermelonDBService.createCustomer({
+        name: customerName,
+        email: customerInfo.email || null,
+        phone: customerInfo.phone || null,
+        addressLine1: customerInfo.address || null,
+        city: customerInfo.city || null,
+        postcode: customerInfo.postcode || null,
+        country: customerInfo.country || null,
+      });
+
+      const estimate = await watermelonDBService.createEstimate(customer.id);
+
+      // Add windows to the estimate
+      for (const window of windows) {
+        await watermelonDBService.addWindowToEstimate(estimate.id, window);
+      }
+
+      // Update estimate with total amount
+      await estimate.updateAmounts({
+        totalAmount,
+        finalAmount: totalAmount,
       });
 
       // Redirect to the estimate details page
-      window.location.href = `/estimates/${savedEstimate._id}`;
+      window.location.href = `/estimates/${estimate.id}`;
     } catch (error) {
-      console.error('Error saving estimate to PouchDB:', error);
+      console.error('Error saving estimate to WatermelonDB:', error);
       alert('An error occurred while saving the estimate. Please try again.');
     } finally {
       setIsSubmitting(false);

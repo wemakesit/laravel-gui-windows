@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { watermelonDBService } from '../Services/WatermelonDBService';
 
 interface PWAStatus {
   serviceWorker: {
@@ -25,10 +26,13 @@ interface PWAStatus {
     platform?: string;
   };
   storage: {
-    pouchDB: boolean;
+    watermelonDB: boolean;
     localStorage: boolean;
     indexedDB: boolean;
     estimates?: number;
+    customers?: number;
+    windows?: number;
+    photos?: number;
   };
   network: {
     online: boolean;
@@ -125,18 +129,18 @@ export default function PWADebugger() {
       // Check Storage Capabilities
       pwaStatus.storage.localStorage = typeof Storage !== 'undefined';
       pwaStatus.storage.indexedDB = 'indexedDB' in window;
-      pwaStatus.storage.pouchDB =
-        typeof (window as any).PouchDB !== 'undefined';
+      pwaStatus.storage.watermelonDB = true; // WatermelonDB is always available when imported
 
-      // Check PouchDB estimates count
-      if (pwaStatus.storage.pouchDB) {
-        try {
-          const db = new (window as any).PouchDB('window_estimates');
-          const result = await db.allDocs();
-          pwaStatus.storage.estimates = result.total_rows;
-        } catch (error) {
-          console.error('PouchDB check failed:', error);
-        }
+      // Check WatermelonDB storage counts
+      try {
+        const storageInfo = await watermelonDBService.getStorageInfo();
+        pwaStatus.storage.estimates = storageInfo.estimates;
+        pwaStatus.storage.customers = storageInfo.customers;
+        pwaStatus.storage.windows = storageInfo.windows;
+        pwaStatus.storage.photos = storageInfo.photos;
+      } catch (error) {
+        console.error('WatermelonDB check failed:', error);
+        pwaStatus.storage.watermelonDB = false;
       }
 
       // Check Network Information
@@ -393,12 +397,21 @@ export default function PWADebugger() {
               status={status.storage.indexedDB}
               label='IndexedDB'
             />
-            <StatusIndicator status={status.storage.pouchDB} label='PouchDB' />
-            {status.storage.estimates !== undefined && (
-              <p className='text-gray-600 text-xs'>
-                Estimates: {status.storage.estimates}
-              </p>
-            )}
+            <StatusIndicator status={status.storage.watermelonDB} label='WatermelonDB' />
+            <div className='text-gray-600 text-xs space-y-1'>
+              {status.storage.estimates !== undefined && (
+                <p>Estimates: {status.storage.estimates}</p>
+              )}
+              {status.storage.customers !== undefined && (
+                <p>Customers: {status.storage.customers}</p>
+              )}
+              {status.storage.windows !== undefined && (
+                <p>Windows: {status.storage.windows}</p>
+              )}
+              {status.storage.photos !== undefined && (
+                <p>Photos: {status.storage.photos}</p>
+              )}
+            </div>
           </div>
         </div>
 

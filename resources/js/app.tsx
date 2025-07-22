@@ -9,6 +9,9 @@ import { createRoot } from 'react-dom/client';
 // Initialize PWA Service
 import { pwaService } from './Services/PWAService';
 
+// Initialize WatermelonDB
+import { watermelonDBService } from './Services/WatermelonDBService';
+
 // Register service worker from Vite PWA plugin
 import { registerSW } from 'virtual:pwa-register';
 
@@ -24,8 +27,13 @@ interface ImportMeta {
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
-// Log PWA initialization
+// Initialize services
 console.log('App: PWA Service initialized', pwaService);
+
+// Initialize WatermelonDB
+watermelonDBService.initialize().catch(error => {
+  console.error('Failed to initialize WatermelonDB:', error);
+});
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {

@@ -2,7 +2,7 @@
  * PWA Service for managing offline functionality, service worker, and app installation
  */
 
-import { indexedDBService, EstimateRecord } from './IndexedDBService';
+import { watermelonDBService } from './WatermelonDBService';
 import { Workbox } from 'workbox-window';
 
 export interface PWAStatus {
@@ -222,22 +222,9 @@ class PWAService {
    */
   public async cacheEstimate(estimateData: EstimateData): Promise<void> {
     try {
-      const estimateRecord: EstimateRecord = {
-        id: estimateData.id || `offline-${Date.now()}`,
-        customerInfo: estimateData.customerInfo,
-        windows: estimateData.windows,
-        selectedCaveats: estimateData.selectedCaveats,
-        companyInfo: estimateData.companyInfo || {},
-        timestamp: estimateData.timestamp,
-        synced: estimateData.synced,
-        lastModified: Date.now(),
-        status: estimateData.synced ? 'synced' : 'draft',
-      };
-
-      await indexedDBService.saveEstimate(estimateRecord);
-
-      // Also store in localStorage as fallback for older browsers
-      const estimates = this.getLocalEstimates();
+      // Store in localStorage for now
+      // TODO: Implement proper WatermelonDB integration for PWA caching
+      const estimates = this.getLocalEstimatesSync();
       const existingIndex = estimates.findIndex(e => e.id === estimateData.id);
       if (existingIndex >= 0) {
         estimates[existingIndex] = estimateData;
@@ -263,33 +250,13 @@ class PWAService {
    */
   public async getLocalEstimates(): Promise<EstimateData[]> {
     try {
-      // Try IndexedDB first
-      const indexedDBEstimates = await indexedDBService.getAllEstimates();
-      if (indexedDBEstimates.length > 0) {
-        return indexedDBEstimates.map(record => ({
-          id: record.id,
-          customerInfo: record.customerInfo,
-          windows: record.windows,
-          selectedCaveats: record.selectedCaveats,
-          companyInfo: record.companyInfo,
-          timestamp: record.timestamp,
-          synced: record.synced,
-        }));
-      }
-
-      // Fallback to localStorage
+      // Use localStorage for now
+      // TODO: Implement proper WatermelonDB integration for PWA caching
       const cached = localStorage.getItem('cached_estimates');
       return cached ? JSON.parse(cached) : [];
     } catch (error) {
       console.error('PWA: Error getting local estimates:', error);
-      // Final fallback to localStorage
-      try {
-        const cached = localStorage.getItem('cached_estimates');
-        return cached ? JSON.parse(cached) : [];
-      } catch (fallbackError) {
-        console.error('PWA: Error with localStorage fallback:', fallbackError);
-        return [];
-      }
+      return [];
     }
   }
 
@@ -316,17 +283,14 @@ class PWAService {
     }
 
     try {
-      // Get unsynced estimates from IndexedDB
-      const unsyncedEstimates = await indexedDBService.getUnsyncedEstimates();
+      // Get unsynced estimates from localStorage
+      // TODO: Implement proper WatermelonDB integration for PWA sync
+      const localEstimates = this.getLocalEstimatesSync();
+      const unsyncedEstimates = localEstimates.filter(e => !e.synced);
 
       if (unsyncedEstimates.length === 0) {
-        // Fallback to localStorage
-        const localEstimates = this.getLocalEstimatesSync();
-        const unsyncedLocal = localEstimates.filter(e => !e.synced);
-        if (unsyncedLocal.length === 0) {
-          console.log('PWA: No estimates to sync');
-          return;
-        }
+        console.log('PWA: No estimates to sync');
+        return;
       }
 
       console.log(`PWA: Syncing ${unsyncedEstimates.length} estimates`);

@@ -5,7 +5,7 @@ import SyncTest from '../Components/SyncTest';
 const SyncTestPage: React.FC = () => {
   return (
     <>
-      <Head title='PouchDB Sync Test' />
+      <Head title='WatermelonDB Storage Test' />
 
       <div className='min-h-screen bg-gray-100'>
         {/* Header */}
@@ -20,11 +20,11 @@ const SyncTestPage: React.FC = () => {
                   ← Back to Dashboard
                 </Link>
                 <h1 className='text-xl font-semibold text-gray-900'>
-                  PouchDB Sync Test
+                  WatermelonDB Storage Test
                 </h1>
               </div>
               <div className='text-sm text-gray-500'>
-                Test offline sync functionality
+                Test offline-first data storage
               </div>
             </div>
           </div>
@@ -40,32 +40,16 @@ const SyncTestPage: React.FC = () => {
           <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
             <div className='text-center text-sm text-gray-500'>
               <p>
-                This page tests the PouchDB sync functionality with CouchDB.
-                Make sure CouchDB is running on localhost:5984 with the
-                configured databases.
+                This page tests the WatermelonDB offline-first data storage functionality.
+                WatermelonDB provides fast, reactive database operations with automatic
+                IndexedDB persistence.
               </p>
               <div className='mt-2 space-x-4'>
                 <span>
-                  CouchDB Admin:{' '}
-                  <a
-                    href='http://localhost:5984/_utils'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-blue-600 hover:text-blue-800'
-                  >
-                    http://localhost:5984/_utils
-                  </a>
+                  Storage: IndexedDB (browser native)
                 </span>
                 <span>
-                  Config DB:{' '}
-                  <a
-                    href='http://localhost:5984/window_config/_all_docs'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='text-blue-600 hover:text-blue-800'
-                  >
-                    window_config
-                  </a>
+                  Sync: Background API synchronization
                 </span>
                 <span>
                   Estimates DB:{' '}

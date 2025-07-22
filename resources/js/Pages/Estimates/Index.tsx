@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
-import { pouchDBService } from '@/Services/PouchDBService';
+import { watermelonDBService } from '@/Services/WatermelonDBService';
 import Modal from '@/Components/Modal';
 
 interface EstimateListItem {
@@ -15,96 +15,165 @@ interface EstimateListItem {
 }
 
 interface IndexProps {
-  estimates: EstimateListItem[];
-  usePouchDB?: boolean;
+  estimates?: EstimateListItem[];
+  useOfflineMode?: boolean;
 }
 
 export default function Index({
-  estimates: initialEstimates,
-  usePouchDB = false,
+  estimates: serverEstimates = [],
+  useOfflineMode = false,
 }: IndexProps) {
-  const [estimates, setEstimates] =
-    useState<EstimateListItem[]>(initialEstimates);
-  const [loading, setLoading] = useState(usePouchDB);
+  const [estimates, setEstimates] = useState<EstimateListItem[]>(serverEstimates);
+  const [loading, setLoading] = useState(true);
   const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // Load estimates from WatermelonDB (offline-first)
   useEffect(() => {
-    if (usePouchDB) {
-      loadEstimatesFromPouchDB();
-    }
-  }, [usePouchDB]);
+    loadEstimatesFromWatermelonDB();
 
-  const loadEstimatesFromPouchDB = async () => {
+    // Listen for online/offline events
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const loadEstimatesFromWatermelonDB = async () => {
     try {
       setLoading(true);
-      console.log('Loading estimates from PouchDB...');
-      const docs = await pouchDBService.getEstimates();
-      console.log('Raw PouchDB docs:', docs);
-      const estimateList = docs.map((doc: any) => ({
-        _id: doc._id,
-        reference_number: doc._id, // Use _id as reference number
-        customer_name: doc.customerName,
-        created_at: new Date(doc.createdAt).toLocaleDateString('en-GB'),
-        window_count: doc.windows ? doc.windows.length : 0,
-        total_amount: doc.totalPrice,
-        has_file: doc._attachments && Object.keys(doc._attachments).length > 0,
-      }));
+      console.log('Loading estimates from WatermelonDB...');
+      const estimates = await watermelonDBService.getAllEstimates();
+      console.log('Raw WatermelonDB estimates:', estimates);
+
+      const estimateList = await Promise.all(
+        estimates.map(async (estimate) => {
+          const customer = await estimate.customer.fetch();
+          const windows = await estimate.windows.fetch();
+
+          return {
+            _id: estimate.id,
+            reference_number: estimate.referenceNumber,
+            customer_name: customer.name,
+            created_at: estimate.createdAt.toLocaleDateString('en-GB'),
+            window_count: windows.length,
+            total_amount: estimate.finalAmount || 0,
+            has_file: estimate.hasPdf,
+          };
+        })
+      );
+
       console.log('Mapped estimate list:', estimateList);
       setEstimates(estimateList);
     } catch (error) {
-      console.error('Error loading estimates from PouchDB:', error);
+      console.error('Error loading estimates from WatermelonDB:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleViewEstimate = async (estimateId: string) => {
-    if (usePouchDB) {
-      // Offline mode - load from PouchDB and show in modal
-      try {
-        setLoadingEstimate(true);
-        const estimate = await pouchDBService.getEstimate(estimateId);
-        setSelectedEstimate(estimate);
+    // Always try to load from WatermelonDB first (offline-first approach)
+    try {
+      setLoadingEstimate(true);
+      const estimate = await watermelonDBService.getEstimate(estimateId);
+
+      if (estimate) {
+        // Load from local database and show in modal
+        const customer = await watermelonDBService.getCustomer(estimate.customerId);
+        const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
+
+        const estimateData = {
+          _id: estimate.id,
+          customerName: customer?.name || 'Unknown Customer',
+          customerEmail: customer?.email || '',
+          customerPhone: customer?.phone || '',
+          customerAddress: customer?.fullAddress || '',
+          windows: windows.map(w => ({
+            id: w.id,
+            room: w.room,
+            windowType: w.windowType,
+            width: w.width,
+            height: w.height,
+            quantity: w.quantity,
+          })),
+          totalPrice: estimate.finalAmount || 0,
+          createdAt: estimate.createdAt.toISOString(),
+          status: estimate.status,
+        };
+
+        setSelectedEstimate(estimateData);
         setShowModal(true);
-      } catch (error) {
-        console.error('Error loading estimate:', error);
-        alert('Error loading estimate. Please try again.');
-      } finally {
-        setLoadingEstimate(false);
+      } else if (!isOffline) {
+        // If not found locally and we're online, navigate to server route
+        router.visit(`/estimates/${estimateId}`);
+      } else {
+        // Offline and not found locally
+        alert('Estimate not available offline. Please try again when online.');
       }
-    } else {
-      // Online mode - navigate to server route
-      router.visit(`/estimates/${estimateId}`);
+    } catch (error) {
+      console.error('Error loading estimate:', error);
+      if (!isOffline) {
+        // Fallback to server route if online
+        router.visit(`/estimates/${estimateId}`);
+      } else {
+        alert('Error loading estimate. Please try again when online.');
+      }
+    } finally {
+      setLoadingEstimate(false);
     }
   };
 
   const handleEditEstimate = (estimateId: string) => {
-    if (usePouchDB) {
-      // For offline editing, we can navigate to the wizard with the estimate ID
-      router.visit(`/estimates/${estimateId}/load`);
-    } else {
-      router.visit(`/estimates/${estimateId}/load`);
-    }
+    // Navigate to the wizard for editing (works both online and offline)
+    router.visit(`/estimates/${estimateId}/load`);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setSelectedEstimate(null);
   };
+
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this window estimate?')) {
-      if (usePouchDB) {
-        try {
-          await pouchDBService.deleteEstimate(id);
-          await loadEstimatesFromPouchDB(); // Reload the list
-        } catch (error) {
-          console.error('Error deleting estimate:', error);
-          alert('Failed to delete estimate');
+      try {
+        // Always try to delete from local database first
+        const estimate = await watermelonDBService.getEstimate(id);
+        if (estimate) {
+          await estimate.markAsDeleted();
+          await loadEstimatesFromWatermelonDB(); // Reload the list
+
+          // If online, also try to sync deletion to server
+          if (!isOffline) {
+            try {
+              router.delete(route('estimates.destroy', id), {
+                preserveState: true,
+                preserveScroll: true,
+                onError: () => {
+                  console.warn('Failed to sync deletion to server, but local deletion succeeded');
+                }
+              });
+            } catch (syncError) {
+              console.warn('Failed to sync deletion to server:', syncError);
+            }
+          }
+        } else if (!isOffline) {
+          // If not found locally but we're online, try server deletion
+          router.delete(route('estimates.destroy', id));
+        } else {
+          alert('Estimate not found locally and cannot delete while offline.');
         }
-      } else {
-        router.delete(route('estimates.destroy', id));
+      } catch (error) {
+        console.error('Error deleting estimate:', error);
+        alert('Failed to delete estimate');
       }
     }
   };

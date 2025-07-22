@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { route } from 'ziggy-js';
-import { pouchDBService } from '@/Services/PouchDBService';
+import { watermelonDBService } from '@/Services/WatermelonDBService';
 
 interface EstimateShowProps {
   estimateId: string;
@@ -33,36 +33,42 @@ export default function Show({
 
   useEffect(() => {
     if (usePouchDB) {
-      loadEstimateFromPouchDB();
+      loadEstimateFromWatermelonDB();
     }
   }, [usePouchDB, estimateId]);
 
-  const loadEstimateFromPouchDB = async () => {
+  const loadEstimateFromWatermelonDB = async () => {
     try {
       setLoading(true);
-      console.log('Loading estimate from PouchDB:', estimateId);
-      const doc = await pouchDBService.getEstimate(estimateId);
+      console.log('Loading estimate from WatermelonDB:', estimateId);
+      const estimate = await watermelonDBService.getEstimate(estimateId);
 
-      // Map PouchDB data to expected format
+      if (!estimate) {
+        console.error('Estimate not found:', estimateId);
+        return;
+      }
+
+      const customer = await estimate.customer.fetch();
+      const windows = await estimate.windows.fetch();
+
+      // Map WatermelonDB data to expected format
       const estimateData: EstimateData = {
-        _id: doc._id,
-        reference_number: doc._id, // Use _id as reference number
-        customer_name: doc.customerName,
-        customer_email: doc.customerEmail,
-        customer_phone: doc.customerPhone,
-        customer_address: doc.customerAddress,
-        window_count: doc.windows ? doc.windows.length : 0,
-        total_amount: doc.totalPrice,
-        created_at: new Date(doc.createdAt).toLocaleDateString('en-GB'),
-        has_file:
-          (doc as any)._attachments &&
-          Object.keys((doc as any)._attachments).length > 0,
-        estimate_data: doc,
+        _id: estimate.id,
+        reference_number: estimate.referenceNumber,
+        customer_name: customer.name,
+        customer_email: customer.email || '',
+        customer_phone: customer.phone || '',
+        customer_address: customer.fullAddress,
+        window_count: windows.length,
+        total_amount: estimate.finalAmount || 0,
+        created_at: estimate.createdAt.toLocaleDateString('en-GB'),
+        has_file: estimate.hasPdf,
+        estimate_data: estimate,
       };
 
       setEstimate(estimateData);
     } catch (error) {
-      console.error('Error loading estimate from PouchDB:', error);
+      console.error('Error loading estimate from WatermelonDB:', error);
     } finally {
       setLoading(false);
     }

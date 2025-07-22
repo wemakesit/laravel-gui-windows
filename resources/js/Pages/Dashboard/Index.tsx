@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { pouchDBService } from '@/Services/PouchDBService';
+import { watermelonDBService } from '@/Services/WatermelonDBService';
 
 interface Estimate {
   _id: string;
@@ -19,43 +19,62 @@ interface Statistics {
 }
 
 interface Props {
-  recentEstimates: Estimate[];
-  statistics: Statistics;
-  usePouchDB?: boolean;
+  recentEstimates?: Estimate[];
+  statistics?: Statistics;
+  useOfflineMode?: boolean;
 }
 
 export default function Dashboard({
-  recentEstimates: initialEstimates,
-  statistics: initialStatistics,
-  usePouchDB = false,
+  recentEstimates: serverEstimates = [],
+  statistics: serverStatistics = { total_estimates: 0, estimates_this_month: 0 },
+  useOfflineMode = false,
 }: Props) {
-  const [recentEstimates, setRecentEstimates] =
-    useState<Estimate[]>(initialEstimates);
-  const [statistics, setStatistics] = useState<Statistics>(initialStatistics);
-  const [loading, setLoading] = useState(usePouchDB);
+  const [recentEstimates, setRecentEstimates] = useState<Estimate[]>(serverEstimates);
+  const [statistics, setStatistics] = useState<Statistics>(serverStatistics);
+  const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // Load data from WatermelonDB (offline-first approach)
   useEffect(() => {
-    if (usePouchDB) {
-      loadDashboardDataFromPouchDB();
-    }
-  }, [usePouchDB]);
+    loadDashboardData();
 
-  const loadDashboardDataFromPouchDB = async () => {
+    // Listen for online/offline events
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('Loading dashboard data from PouchDB...');
-      const docs = await pouchDBService.getEstimates();
+      console.log('Loading dashboard data from WatermelonDB...');
+      const estimates = await watermelonDBService.getAllEstimates();
 
-      // Map PouchDB data to dashboard format
-      const estimateList = docs.map((doc: any) => ({
-        _id: doc._id,
-        reference_number: doc._id, // Use _id as reference number
-        customer_name: doc.customerName,
-        created_at: new Date(doc.createdAt).toLocaleDateString('en-GB'),
-        window_count: doc.windows ? doc.windows.length : 0,
-        total_amount: doc.totalPrice,
-        has_file: doc._attachments && Object.keys(doc._attachments).length > 0,
-      }));
+      // Map WatermelonDB data to dashboard format
+      const estimateList = await Promise.all(
+        estimates.map(async (estimate) => {
+          // Get related data using WatermelonDB relations
+          const customer = await watermelonDBService.getCustomer(estimate.customerId);
+          const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
+
+          return {
+            _id: estimate.id,
+            reference_number: estimate.referenceNumber,
+            customer_name: customer?.name || 'Unknown Customer',
+            created_at: estimate.createdAt.toLocaleDateString('en-GB'),
+            window_count: windows.length,
+            total_amount: estimate.finalAmount || 0,
+            has_file: estimate.hasPdf,
+          };
+        })
+      );
 
       // Get recent estimates (last 5)
       const recentEstimatesList = estimateList
@@ -70,8 +89,8 @@ export default function Dashboard({
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
 
-      const estimatesThisMonth = docs.filter(doc => {
-        const docDate = new Date(doc.createdAt);
+      const estimatesThisMonth = estimates.filter(estimate => {
+        const docDate = estimate.createdAt;
         return (
           docDate.getMonth() === currentMonth &&
           docDate.getFullYear() === currentYear
@@ -90,7 +109,7 @@ export default function Dashboard({
         recentCount: recentEstimatesList.length,
       });
     } catch (error) {
-      console.error('Error loading dashboard data from PouchDB:', error);
+      console.error('Error loading dashboard data from WatermelonDB:', error);
     } finally {
       setLoading(false);
     }
@@ -98,9 +117,19 @@ export default function Dashboard({
   return (
     <AuthenticatedLayout
       header={
-        <h2 className='text-xl font-semibold leading-tight text-gray-800'>
-          Dashboard
-        </h2>
+        <div className='flex items-center justify-between'>
+          <h2 className='text-xl font-semibold leading-tight text-gray-800'>
+            Dashboard
+          </h2>
+          {isOffline && (
+            <div className='flex items-center space-x-2 rounded-md bg-yellow-100 px-3 py-1 text-sm text-yellow-800'>
+              <svg className='h-4 w-4' fill='currentColor' viewBox='0 0 20 20'>
+                <path fillRule='evenodd' d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+              </svg>
+              <span>Offline Mode</span>
+            </div>
+          )}
+        </div>
       }
     >
       <Head title='Dashboard' />

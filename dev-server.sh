@@ -25,15 +25,15 @@ cleanup() {
 
 # Function to start Laravel server
 start_laravel() {
-    echo "🐘 Starting Laravel development server on http://0.0.0.0:8888..."
-    php artisan serve --host=0.0.0.0 --port=8888 &
+    echo "🐘 Starting Laravel development server on http://localhost:8888..."
+    php artisan serve --host=localhost --port=8888 &
     LARAVEL_PID=$!
     echo "Laravel server started with PID: $LARAVEL_PID"
 }
 
 # Function to start Vite server
 start_vite() {
-    echo "⚡ Starting Vite development server on http://0.0.0.0:5173..."
+    echo "⚡ Starting Vite development server on http://localhost:5173..."
     npm run dev &
     VITE_PID=$!
     echo "Vite server started with PID: $VITE_PID"
@@ -44,15 +44,15 @@ check_servers() {
     echo "🔍 Checking server status..."
     
     # Check Laravel server
-    if curl -s http://0.0.0.0:8888 > /dev/null; then
-        echo "✅ Laravel server is running on http://0.0.0.0:8888"
+    if curl -s http://localhost:8888 > /dev/null; then
+        echo "✅ Laravel server is running on http://localhost:8888"
     else
         echo "❌ Laravel server is not responding"
     fi
-    
+
     # Check Vite server
-    if curl -s http://0.0.0.0:5173 > /dev/null; then
-        echo "✅ Vite server is running on http://0.0.0.0:5173"
+    if curl -s http://localhost:5173 > /dev/null; then
+        echo "✅ Vite server is running on http://localhost:5173"
     else
         echo "❌ Vite server is not responding"
     fi

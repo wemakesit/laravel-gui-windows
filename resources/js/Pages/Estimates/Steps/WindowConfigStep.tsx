@@ -41,11 +41,14 @@ export default function WindowConfigStep({
   useEffect(() => {
     if (validateStep) {
       // A window is considered configured if it has glass_specification, paint_finish, and hardware_finish
-      const isValid = windows.length > 0 && windows.every(window =>
-        window.glass_specification &&
-        window.paint_finish &&
-        window.hardware_finish
-      );
+      const isValid =
+        windows.length > 0 &&
+        windows.every(
+          window =>
+            window.glass_specification &&
+            window.paint_finish &&
+            window.hardware_finish
+        );
       validateStep(3, isValid);
     }
   }, [windows, validateStep]);

@@ -73,8 +73,6 @@ class PouchDBService {
     }
   }
 
-
-
   /**
    * Subscribe to sync status updates
    */

@@ -1,7 +1,11 @@
 // React is used implicitly for JSX
 import React, { useEffect } from 'react';
 import WindowForm from '../Components/WindowForm';
-import { WindowItem, WindowType, WindowSelectionStepProps } from '@/types/wizard';
+import {
+  WindowItem,
+  WindowType,
+  WindowSelectionStepProps,
+} from '@/types/wizard';
 
 export default function WindowSelectionStep({
   windows,

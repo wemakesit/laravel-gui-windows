@@ -23,7 +23,10 @@ interface EstimateData {
   estimate_data?: any;
 }
 
-export default function Show({ estimateId, usePouchDB = false }: EstimateShowProps) {
+export default function Show({
+  estimateId,
+  usePouchDB = false,
+}: EstimateShowProps) {
   const [estimate, setEstimate] = useState<EstimateData | null>(null);
   const [loading, setLoading] = useState(usePouchDB);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -51,7 +54,9 @@ export default function Show({ estimateId, usePouchDB = false }: EstimateShowPro
         window_count: doc.windows ? doc.windows.length : 0,
         total_amount: doc.totalPrice,
         created_at: new Date(doc.createdAt).toLocaleDateString('en-GB'),
-        has_file: (doc as any)._attachments && Object.keys((doc as any)._attachments).length > 0,
+        has_file:
+          (doc as any)._attachments &&
+          Object.keys((doc as any)._attachments).length > 0,
         estimate_data: doc,
       };
 
@@ -71,7 +76,10 @@ export default function Show({ estimateId, usePouchDB = false }: EstimateShowPro
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+          'X-CSRF-TOKEN':
+            document
+              .querySelector('meta[name="csrf-token"]')
+              ?.getAttribute('content') || '',
         },
       });
 
@@ -99,7 +107,7 @@ export default function Show({ estimateId, usePouchDB = false }: EstimateShowPro
   if (loading) {
     return (
       <>
-        <Head title="Loading Estimate..." />
+        <Head title='Loading Estimate...' />
         <div className='py-12'>
           <div className='max-w-4xl mx-auto sm:px-6 lg:px-8'>
             <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
@@ -119,14 +127,18 @@ export default function Show({ estimateId, usePouchDB = false }: EstimateShowPro
   if (!estimate) {
     return (
       <>
-        <Head title="Estimate Not Found" />
+        <Head title='Estimate Not Found' />
         <div className='py-12'>
           <div className='max-w-4xl mx-auto sm:px-6 lg:px-8'>
             <div className='bg-white overflow-hidden shadow-sm sm:rounded-lg'>
               <div className='p-6 text-gray-900'>
                 <div className='text-center'>
-                  <h1 className='text-2xl font-bold text-gray-900 mb-4'>Estimate Not Found</h1>
-                  <p className='text-gray-600 mb-6'>The estimate you're looking for could not be found.</p>
+                  <h1 className='text-2xl font-bold text-gray-900 mb-4'>
+                    Estimate Not Found
+                  </h1>
+                  <p className='text-gray-600 mb-6'>
+                    The estimate you're looking for could not be found.
+                  </p>
                   <Link
                     href={route('estimates.index')}
                     className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors'

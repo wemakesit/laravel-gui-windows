@@ -41,22 +41,52 @@ class PWAService {
   private async init() {
     console.log('PWA: Initializing PWA Service...');
 
+    // Check if we're in a secure context (HTTPS or localhost)
+    if (!this.isSecureContext()) {
+      console.log(
+        'PWA: Service workers require HTTPS or localhost. Current origin:',
+        window.location.origin
+      );
+      console.log(
+        'PWA: For development, please use localhost instead of 0.0.0.0 or use HTTPS'
+      );
+      console.log(
+        'PWA: Skipping service worker registration in insecure context'
+      );
+      return;
+    }
+
     // Register service worker using Workbox (check if sw.js exists)
     if ('serviceWorker' in navigator) {
       try {
+        // Check if we're in development mode
+        const isDevelopment = import.meta.env.DEV;
+
+        if (isDevelopment) {
+          console.log(
+            'PWA: Development mode detected - service worker functionality limited'
+          );
+          console.log(
+            'PWA: Service worker will be available after building the application'
+          );
+          // In development, we can still register basic offline functionality
+          // but skip the full service worker registration
+          return;
+        }
+
         console.log('PWA: Registering service worker with Workbox...');
         this.wb = new Workbox('/sw.js');
 
-        this.wb.addEventListener('installed', (event) => {
+        this.wb.addEventListener('installed', event => {
           console.log('PWA: Service worker installed', event);
         });
 
-        this.wb.addEventListener('waiting', (event) => {
+        this.wb.addEventListener('waiting', event => {
           console.log('PWA: Service worker waiting', event);
           // Show update available notification
         });
 
-        this.wb.addEventListener('controlling', (event) => {
+        this.wb.addEventListener('controlling', event => {
           console.log('PWA: Service worker controlling', event);
           window.location.reload();
         });
@@ -69,6 +99,9 @@ class PWAService {
         this.serviceWorker = registration.active;
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
+        console.log(
+          'PWA: This is normal in development mode - service worker will be available after build'
+        );
       }
     } else {
       console.log('PWA: Service worker not supported in this browser');
@@ -472,6 +505,19 @@ class PWAService {
     }
 
     return true;
+  }
+
+  /**
+   * Check if we're in a secure context for service workers
+   */
+  private isSecureContext(): boolean {
+    // Service workers require HTTPS or localhost
+    return (
+      window.isSecureContext ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.protocol === 'https:'
+    );
   }
 
   /**

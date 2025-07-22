@@ -24,8 +24,13 @@ interface Props {
   usePouchDB?: boolean;
 }
 
-export default function Dashboard({ recentEstimates: initialEstimates, statistics: initialStatistics, usePouchDB = false }: Props) {
-  const [recentEstimates, setRecentEstimates] = useState<Estimate[]>(initialEstimates);
+export default function Dashboard({
+  recentEstimates: initialEstimates,
+  statistics: initialStatistics,
+  usePouchDB = false,
+}: Props) {
+  const [recentEstimates, setRecentEstimates] =
+    useState<Estimate[]>(initialEstimates);
   const [statistics, setStatistics] = useState<Statistics>(initialStatistics);
   const [loading, setLoading] = useState(usePouchDB);
 
@@ -54,7 +59,10 @@ export default function Dashboard({ recentEstimates: initialEstimates, statistic
 
       // Get recent estimates (last 5)
       const recentEstimatesList = estimateList
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
         .slice(0, 5);
 
       // Calculate statistics
@@ -64,7 +72,10 @@ export default function Dashboard({ recentEstimates: initialEstimates, statistic
 
       const estimatesThisMonth = docs.filter(doc => {
         const docDate = new Date(doc.createdAt);
-        return docDate.getMonth() === currentMonth && docDate.getFullYear() === currentYear;
+        return (
+          docDate.getMonth() === currentMonth &&
+          docDate.getFullYear() === currentYear
+        );
       }).length;
 
       setRecentEstimates(recentEstimatesList);
@@ -73,7 +84,11 @@ export default function Dashboard({ recentEstimates: initialEstimates, statistic
         estimates_this_month: estimatesThisMonth,
       });
 
-      console.log('Dashboard data loaded:', { totalEstimates, estimatesThisMonth, recentCount: recentEstimatesList.length });
+      console.log('Dashboard data loaded:', {
+        totalEstimates,
+        estimatesThisMonth,
+        recentCount: recentEstimatesList.length,
+      });
     } catch (error) {
       console.error('Error loading dashboard data from PouchDB:', error);
     } finally {
@@ -288,7 +303,9 @@ export default function Dashboard({ recentEstimates: initialEstimates, statistic
               {loading ? (
                 <div className='px-4 py-12 text-center'>
                   <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto'></div>
-                  <p className='mt-4 text-gray-600'>Loading recent estimates...</p>
+                  <p className='mt-4 text-gray-600'>
+                    Loading recent estimates...
+                  </p>
                 </div>
               ) : recentEstimates.length > 0 ? (
                 <ul className='divide-y divide-gray-200'>

@@ -3,6 +3,9 @@
  * This is a placeholder for the IndexedDB service that was cleared
  */
 
+// TypeScript declaration for IDBKeyRange
+declare const IDBKeyRange: any;
+
 export interface EstimateRecord {
   id: string;
   customerInfo: any;

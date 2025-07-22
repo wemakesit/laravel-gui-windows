@@ -22,3 +22,5 @@ yarn-error.log
 /.vscode
 /.zed
 /coverage
+/test-results
+/playwright-report

@@ -3,7 +3,7 @@
  * Tests Progressive Web App features including service worker, manifest, and offline capabilities
  */
 
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe('PWA Functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe('PWA Functionality', () => {
 
   test('should have service worker registered', async ({ page }) => {
     await page.goto('/login');
-    
+
     const serviceWorkerStatus = await page.evaluate(async () => {
       if ('serviceWorker' in navigator) {
         try {
@@ -39,7 +39,7 @@ test.describe('PWA Functionality', () => {
   test('should have accessible web app manifest', async ({ page }) => {
     const manifestResponse = await page.goto('/build/manifest.webmanifest');
     expect(manifestResponse.status()).toBe(200);
-    
+
     const manifestContent = await manifestResponse.json();
     expect(manifestContent.name).toBeDefined();
     expect(manifestContent.short_name).toBeDefined();
@@ -49,20 +49,20 @@ test.describe('PWA Functionality', () => {
 
   test('should cache resources for offline use', async ({ page }) => {
     await page.goto('/login');
-    
+
     // Check if critical resources are cached
     const cacheStatus = await page.evaluate(async () => {
       if ('caches' in window) {
         try {
           const cacheNames = await caches.keys();
           const results = {};
-          
+
           for (const cacheName of cacheNames) {
             const cache = await caches.open(cacheName);
             const keys = await cache.keys();
             results[cacheName] = keys.length;
           }
-          
+
           return { caches: results, total: cacheNames.length };
         } catch (error) {
           return { error: error.message };
@@ -98,7 +98,10 @@ test.describe('PWA Functionality', () => {
     await context.setOffline(false);
   });
 
-  test('should show offline indicator when offline', async ({ page, context }) => {
+  test('should show offline indicator when offline', async ({
+    page,
+    context,
+  }) => {
     await page.goto('/login');
     await page.fill('#email', 'test@example.com');
     await page.fill('#password', 'password');
@@ -107,15 +110,17 @@ test.describe('PWA Functionality', () => {
 
     // Go offline
     await context.setOffline(true);
-    
+
     // Trigger a navigation to show offline status
     await page.reload();
-    
+
     // Should show offline indicator
     await expect(page.locator('text=Offline Mode')).toBeVisible();
   });
 
-  test('should store data in WatermelonDB for offline access', async ({ page }) => {
+  test('should store data in WatermelonDB for offline access', async ({
+    page,
+  }) => {
     await page.goto('/login');
     await page.fill('#email', 'test@example.com');
     await page.fill('#password', 'password');
@@ -129,7 +134,7 @@ test.describe('PWA Functionality', () => {
         try {
           // Try to open a test database
           const request = indexedDB.open('test-db', 1);
-          return new Promise((resolve) => {
+          return new Promise(resolve => {
             request.onsuccess = () => {
               request.result.close();
               resolve({ available: true });
@@ -150,7 +155,7 @@ test.describe('PWA Functionality', () => {
 
   test('should handle PWA installation prompt', async ({ page }) => {
     await page.goto('/login');
-    
+
     // Check if PWA installation is possible
     const installStatus = await page.evaluate(() => {
       return {
@@ -178,10 +183,10 @@ test.describe('PWA Functionality', () => {
 
     // Reload page - session should persist
     await page.reload();
-    
+
     // Should still be logged in (not redirected to login)
     await expect(page).toHaveURL('/dashboard');
-    
+
     // Go back online
     await context.setOffline(false);
   });

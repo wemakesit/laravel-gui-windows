@@ -3,7 +3,7 @@
  * Tests the complete estimate creation, viewing, and management workflow
  */
 
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe('Estimate Workflow', () => {
   test.beforeEach(async ({ page }) => {

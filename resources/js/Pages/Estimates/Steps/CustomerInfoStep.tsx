@@ -126,6 +126,12 @@ export default function CustomerInfoStep({
 
     // Only update parent component if validation status has changed
     if (validateStep && valid !== prevValidRef.current) {
+      // Force immediate save of customer data when validation changes
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      updateCustomerInfo(formData);
+
       validateStep(1, valid);
       // Update the ref with current validation state
       prevValidRef.current = valid;
@@ -136,6 +142,7 @@ export default function CustomerInfoStep({
     formData.email,
     formData.phone,
     formData.address,
+    // Remove updateCustomerInfo from dependencies to avoid infinite loops
   ]);
 
   const handleChange = (
@@ -168,14 +175,20 @@ export default function CustomerInfoStep({
   // Add timeout ref for debouncing
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup timeout on unmount
+  // Store latest formData in a ref to avoid stale closure
+  const latestFormDataRef = useRef(formData);
+  latestFormDataRef.current = formData;
+
+  // Cleanup timeout on unmount and ensure final update
   useEffect(() => {
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
+        // Ensure final update is sent immediately on unmount
+        updateCustomerInfo(latestFormDataRef.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency array to avoid infinite loops
 
   // State to store API configuration
 

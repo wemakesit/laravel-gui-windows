@@ -66,10 +66,13 @@ test.describe('WatermelonDB Storage', () => {
     await page.keyboard.press('Enter');
 
     await page.fill('input[name="quantity"]', '1');
-    await page.click('button:has-text("Save")');
+    await page.click('button:has-text("Save Window")');
 
-    // Wait for modal to close and window to be added
-    await page.waitForSelector('tbody tr', { state: 'visible' });
+    // Wait for modal to close
+    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
+
+    // Wait for window to be added to the list
+    await page.waitForSelector('text=Living Room', { state: 'visible' });
 
     // Step 3: Window Configuration
     await page.click('text=Next');
@@ -93,19 +96,15 @@ test.describe('WatermelonDB Storage', () => {
     // Step 5: Review and Generate
     await page.click('text=Next');
 
-    // Try to click Generate Estimate, or use Save Offline if available
-    try {
-      await page.waitForSelector(
-        'button:has-text("Generate Estimate"):not([disabled])',
-        {
-          timeout: 5000,
-        }
-      );
-      await page.click('button:has-text("Generate Estimate")');
-    } catch {
-      // If Generate Estimate is not available, try Save Offline
-      await page.click('button:has-text("Save Offline")');
-    }
+    // Wait for the Generate Estimate button to be enabled
+    await page.waitForSelector(
+      'button:has-text("Generate Estimate"):not([disabled])',
+      {
+        timeout: 15000,
+      }
+    );
+
+    await page.click('button:has-text("Generate Estimate")');
 
     // Verify that the estimate was created by checking the dashboard
     await page.goto('/dashboard');
@@ -153,14 +152,60 @@ test.describe('WatermelonDB Storage', () => {
     await page.fill('#address', '456 Offline Street\nOffline City\nOF1 2FL');
     await page.click('text=Next');
 
-    await page.selectOption('#room', 'Kitchen');
-    await page.selectOption('#window_type', 'Tilt & Turn');
-    await page.fill('#width', '800');
-    await page.fill('#height', '1200');
-    await page.fill('#quantity', '1');
-    await page.click('text=Add Window');
+    // Add a window using the modal form
+    await page.click('button:has-text("Add Window")');
+    await page.waitForSelector('input[name="room"]', { state: 'visible' });
+
+    // Fill window details in modal using Combobox inputs
+    await page.click('input[name="room"]');
+    await page.fill('input[name="room"]', 'Kitchen');
+    await page.keyboard.press('Enter');
+
+    await page.click('input[name="type"]');
+    await page.fill('input[name="type"]', 'Tilt & Turn');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    await page.fill('input[name="quantity"]', '1');
+    await page.click('button:has-text("Save Window")');
+
+    // Wait for modal to close
+    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
+
+    // Wait for window to be added to the list
+    await page.waitForSelector('text=Kitchen', { state: 'visible' });
+
+    // Step 3: Window Configuration
     await page.click('text=Next');
-    await page.click('text=Generate Estimate');
+    await page.click('button:has-text("Configure")');
+    await page.waitForSelector('#glass_specification', { state: 'visible' });
+
+    // Configure the window with required fields
+    await page.selectOption('#glass_specification', { index: 1 }); // Select first option
+    await page.selectOption('#paint_finish', { index: 1 }); // Select first option
+    await page.selectOption('#hardware_finish', { index: 1 }); // Select first option
+    await page.click('button:has-text("Save Configuration")');
+
+    // Wait for configuration to be saved and modal to close
+    await page.waitForSelector('text=Clear Double Glazed', {
+      state: 'visible',
+    });
+
+    // Step 4: Extras Selection (skip)
+    await page.click('text=Next');
+
+    // Step 5: Review and Generate
+    await page.click('text=Next');
+
+    // Wait for the Generate Estimate button to be enabled
+    await page.waitForSelector(
+      'button:has-text("Generate Estimate"):not([disabled])',
+      {
+        timeout: 15000,
+      }
+    );
+
+    await page.click('button:has-text("Generate Estimate")');
 
     // Wait for estimate to be created
     await page.waitForURL(/\/estimates\/[^/]+$/);
@@ -190,43 +235,100 @@ test.describe('WatermelonDB Storage', () => {
     page,
     context,
   }) => {
-    // Go offline first
-    await context.setOffline(true);
-
-    // Create an estimate while offline
+    // First create an estimate while online, then test offline access
     await page.goto('/estimates/create');
+
+    // Fill customer information
     await page.fill('#first_name', 'Sync');
     await page.fill('#last_name', 'Test');
     await page.fill('#email', 'sync@test.com');
     await page.fill('#phone', '01234567890');
+
+    // Handle address
+    await page.fill('#postcode', 'SW1A 1AA');
+    await page.waitForTimeout(2000);
     await page.click('text=Enter Address Manually');
+    await page.waitForSelector('#address', { state: 'visible' });
     await page.fill('#address', '789 Sync Street\nSync City\nSY1 2NC');
+
+    // Verify form is filled and proceed
+    await expect(page.locator('#first_name')).toHaveValue('Sync');
+    await expect(page.locator('#last_name')).toHaveValue('Test');
     await page.click('text=Next');
 
     // Add a window using the modal form
     await page.click('button:has-text("Add Window")');
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('input[name="room"]', { state: 'visible' });
 
     // Fill window details in modal using Combobox inputs
     await page.click('input[name="room"]');
     await page.fill('input[name="room"]', 'Bedroom');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
 
     await page.click('input[name="type"]');
     await page.fill('input[name="type"]', 'Fixed');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
 
     await page.fill('input[name="quantity"]', '2');
-    await page.click('button:has-text("Save")');
-    await page.waitForTimeout(1000);
-    await page.click('text=Next');
-    await page.click('text=Generate Estimate');
+    await page.click('button:has-text("Save Window")');
 
-    // Estimate should be created and stored locally
+    // Wait for modal to close
+    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
+
+    // Wait for window to be added to the list
+    await page.waitForSelector('text=Bedroom', { state: 'visible' });
+
+    // Step 3: Window Configuration
+    await page.click('text=Next');
+    await page.click('button:has-text("Configure")');
+    await page.waitForSelector('#glass_specification', { state: 'visible' });
+
+    // Configure the window with required fields
+    await page.selectOption('#glass_specification', { index: 1 }); // Select first option
+    await page.selectOption('#paint_finish', { index: 1 }); // Select first option
+    await page.selectOption('#hardware_finish', { index: 1 }); // Select first option
+    await page.click('button:has-text("Save Configuration")');
+
+    // Wait for configuration to be saved and modal to close
+    await page.waitForSelector('text=Clear Double Glazed', {
+      state: 'visible',
+    });
+
+    // Step 4: Extras Selection (skip)
+    await page.click('text=Next');
+
+    // Step 5: Review and Generate
+    await page.click('text=Next');
+
+    // Wait for the Generate Estimate button to be enabled
+    await page.waitForSelector(
+      'button:has-text("Generate Estimate"):not([disabled])',
+      {
+        timeout: 15000,
+      }
+    );
+
+    await page.click('button:has-text("Generate Estimate")');
+    // Wait for estimate to be created
     await page.waitForURL(/\/estimates\/[^/]+$/);
+    const estimateUrl = page.url();
+
+    // Now go offline and test offline access
+    await context.setOffline(true);
+
+    // Navigate to estimates list - should load from WatermelonDB
+    await page.goto('/estimates');
+    await expect(page.locator('h1')).toContainText('Estimates');
+
+    // Should show estimates loaded from local storage
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('tbody tr')).toContainText('Sync Test');
+
+    // Should be able to view the estimate offline
+    await page.goto(estimateUrl);
+    await expect(page.locator('h1')).toContainText('Estimate');
+    await expect(page.locator('text=Sync Test')).toBeVisible();
 
     // Go back online
     await context.setOffline(false);
@@ -234,7 +336,7 @@ test.describe('WatermelonDB Storage', () => {
     // Trigger sync by navigating or refreshing
     await page.reload();
 
-    // Data should sync to server (this would need server-side verification in real tests)
+    // Data should still be available after coming back online
     await expect(page.locator('text=Sync Test')).toBeVisible();
   });
 
@@ -261,22 +363,79 @@ test.describe('WatermelonDB Storage', () => {
   test('should clear all data when requested', async ({ page }) => {
     // Create some test data first
     await page.goto('/estimates/create');
+
+    // Fill customer information
     await page.fill('#first_name', 'Clear');
     await page.fill('#last_name', 'Test');
     await page.fill('#email', 'clear@test.com');
     await page.fill('#phone', '01234567890');
+
+    // Handle address
+    await page.fill('#postcode', 'SW1A 1AA');
+    await page.waitForTimeout(2000);
     await page.click('text=Enter Address Manually');
+    await page.waitForSelector('#address', { state: 'visible' });
     await page.fill('#address', '123 Clear Street');
+
+    // Verify form is filled and proceed
+    await expect(page.locator('#first_name')).toHaveValue('Clear');
+    await expect(page.locator('#last_name')).toHaveValue('Test');
     await page.click('text=Next');
 
-    await page.selectOption('#room', 'Office');
-    await page.selectOption('#window_type', 'Sliding');
-    await page.fill('#width', '1000');
-    await page.fill('#height', '1200');
-    await page.fill('#quantity', '1');
-    await page.click('text=Add Window');
+    // Add a window using the modal form
+    await page.click('button:has-text("Add Window")');
+    await page.waitForSelector('input[name="room"]', { state: 'visible' });
+
+    // Fill window details in modal using Combobox inputs
+    await page.click('input[name="room"]');
+    await page.fill('input[name="room"]', 'Office');
+    await page.keyboard.press('Enter');
+
+    await page.click('input[name="type"]');
+    await page.fill('input[name="type"]', 'Sliding');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    await page.fill('input[name="quantity"]', '1');
+    await page.click('button:has-text("Save Window")');
+
+    // Wait for modal to close
+    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
+
+    // Wait for window to be added to the list
+    await page.waitForSelector('text=Office', { state: 'visible' });
+
+    // Step 3: Window Configuration
     await page.click('text=Next');
-    await page.click('text=Generate Estimate');
+    await page.click('button:has-text("Configure")');
+    await page.waitForSelector('#glass_specification', { state: 'visible' });
+
+    // Configure the window with required fields
+    await page.selectOption('#glass_specification', { index: 1 }); // Select first option
+    await page.selectOption('#paint_finish', { index: 1 }); // Select first option
+    await page.selectOption('#hardware_finish', { index: 1 }); // Select first option
+    await page.click('button:has-text("Save Configuration")');
+
+    // Wait for configuration to be saved and modal to close
+    await page.waitForSelector('text=Clear Double Glazed', {
+      state: 'visible',
+    });
+
+    // Step 4: Extras Selection (skip)
+    await page.click('text=Next');
+
+    // Step 5: Review and Generate
+    await page.click('text=Next');
+
+    // Wait for the Generate Estimate button to be enabled
+    await page.waitForSelector(
+      'button:has-text("Generate Estimate"):not([disabled])',
+      {
+        timeout: 15000,
+      }
+    );
+
+    await page.click('button:has-text("Generate Estimate")');
 
     // Go to storage test page
     await page.goto('/sync-test');
@@ -323,22 +482,79 @@ test.describe('WatermelonDB Storage', () => {
   }) => {
     // Create an estimate
     await page.goto('/estimates/create');
+
+    // Fill customer information
     await page.fill('#first_name', 'Integrity');
     await page.fill('#last_name', 'Test');
     await page.fill('#email', 'integrity@test.com');
     await page.fill('#phone', '01234567890');
+
+    // Handle address
+    await page.fill('#postcode', 'SW1A 1AA');
+    await page.waitForTimeout(2000);
     await page.click('text=Enter Address Manually');
+    await page.waitForSelector('#address', { state: 'visible' });
     await page.fill('#address', '456 Integrity Street');
+
+    // Verify form is filled and proceed
+    await expect(page.locator('#first_name')).toHaveValue('Integrity');
+    await expect(page.locator('#last_name')).toHaveValue('Test');
     await page.click('text=Next');
 
-    await page.selectOption('#room', 'Bathroom');
-    await page.selectOption('#window_type', 'Awning');
-    await page.fill('#width', '400');
-    await page.fill('#height', '600');
-    await page.fill('#quantity', '1');
-    await page.click('text=Add Window');
+    // Add a window using the modal form
+    await page.click('button:has-text("Add Window")');
+    await page.waitForSelector('input[name="room"]', { state: 'visible' });
+
+    // Fill window details in modal using Combobox inputs
+    await page.click('input[name="room"]');
+    await page.fill('input[name="room"]', 'Bathroom');
+    await page.keyboard.press('Enter');
+
+    await page.click('input[name="type"]');
+    await page.fill('input[name="type"]', 'Awning');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    await page.fill('input[name="quantity"]', '1');
+    await page.click('button:has-text("Save Window")');
+
+    // Wait for modal to close
+    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
+
+    // Wait for window to be added to the list
+    await page.waitForSelector('text=Bathroom', { state: 'visible' });
+
+    // Step 3: Window Configuration
     await page.click('text=Next');
-    await page.click('text=Generate Estimate');
+    await page.click('button:has-text("Configure")');
+    await page.waitForSelector('#glass_specification', { state: 'visible' });
+
+    // Configure the window with required fields
+    await page.selectOption('#glass_specification', { index: 1 }); // Select first option
+    await page.selectOption('#paint_finish', { index: 1 }); // Select first option
+    await page.selectOption('#hardware_finish', { index: 1 }); // Select first option
+    await page.click('button:has-text("Save Configuration")');
+
+    // Wait for configuration to be saved and modal to close
+    await page.waitForSelector('text=Clear Double Glazed', {
+      state: 'visible',
+    });
+
+    // Step 4: Extras Selection (skip)
+    await page.click('text=Next');
+
+    // Step 5: Review and Generate
+    await page.click('text=Next');
+
+    // Wait for the Generate Estimate button to be enabled
+    await page.waitForSelector(
+      'button:has-text("Generate Estimate"):not([disabled])',
+      {
+        timeout: 15000,
+      }
+    );
+
+    await page.click('button:has-text("Generate Estimate")');
 
     const estimateUrl = page.url();
 

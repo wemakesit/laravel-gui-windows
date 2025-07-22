@@ -216,9 +216,15 @@ export default function WindowForm({
                   name='room'
                   className='w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 focus:ring-0'
                   displayValue={(room: string) => room}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setRoomQuery(e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setRoomQuery(value);
+                    // Also update form data when typing
+                    setFormData({
+                      ...formData,
+                      room: value,
+                    });
+                  }}
                   required
                 />
                 <Combobox.Button className='absolute inset-y-0 right-0 flex items-center pr-2'>
@@ -318,9 +324,15 @@ export default function WindowForm({
                   name='type'
                   className='w-full border-none py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 focus:ring-0'
                   displayValue={(type: string) => type || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setWindowTypeQuery(e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    setWindowTypeQuery(value);
+                    // Also update form data when typing
+                    setFormData({
+                      ...formData,
+                      type: value,
+                    });
+                  }}
                   required
                 />
                 <Combobox.Button className='absolute inset-y-0 right-0 flex items-center pr-2'>

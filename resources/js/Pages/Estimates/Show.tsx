@@ -5,7 +5,7 @@ import { watermelonDBService } from '@/Services/WatermelonDBService';
 
 interface EstimateShowProps {
   estimateId: string;
-  usePouchDB?: boolean;
+  useOfflineMode?: boolean;
 }
 
 interface EstimateData {
@@ -25,17 +25,17 @@ interface EstimateData {
 
 export default function Show({
   estimateId,
-  usePouchDB = false,
+  useOfflineMode = false,
 }: EstimateShowProps) {
   const [estimate, setEstimate] = useState<EstimateData | null>(null);
-  const [loading, setLoading] = useState(usePouchDB);
+  const [loading, setLoading] = useState(useOfflineMode);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
-    if (usePouchDB) {
+    if (useOfflineMode) {
       loadEstimateFromWatermelonDB();
     }
-  }, [usePouchDB, estimateId]);
+  }, [useOfflineMode, estimateId]);
 
   const loadEstimateFromWatermelonDB = async () => {
     try {

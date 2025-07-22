@@ -105,7 +105,7 @@ const SyncTest: React.FC = () => {
     }
   };
 
-  // Removed PouchDB-specific status functions
+  // WatermelonDB status functions would go here
 
   return (
     <div className='max-w-4xl mx-auto p-6 space-y-6'>
@@ -193,7 +193,7 @@ const SyncTest: React.FC = () => {
           <p className='text-sm text-gray-700'>
             This component tests the WatermelonDB integration. WatermelonDB provides
             offline-first data storage with better performance and TypeScript support
-            compared to PouchDB. Use the buttons above to test creating customers and
+            compared to traditional database solutions. Use the buttons above to test creating customers and
             estimates, or clear all data to start fresh.
           </p>
         </div>

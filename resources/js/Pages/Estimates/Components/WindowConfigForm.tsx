@@ -97,8 +97,6 @@ export default function WindowConfigForm({
             {safelyRenderOptions(finishes?.hardware_finishes)}
           </select>
         </div>
-
-
       </div>
 
       <div className='flex justify-end space-x-3'>

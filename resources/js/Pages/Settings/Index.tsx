@@ -165,7 +165,8 @@ function CompanyInfoTab({ companyInfo }: { companyInfo: CompanyInfo }) {
           Company Information
         </h3>
         <p className='mt-1 text-sm text-gray-500'>
-          This information will appear on all generated estimates and quotations.
+          This information will appear on all generated estimates and
+          quotations.
         </p>
       </div>
 

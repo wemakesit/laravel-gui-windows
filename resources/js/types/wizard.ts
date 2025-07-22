@@ -4,21 +4,21 @@
  */
 
 export interface WindowItem {
-  id?: string;                    // Optional for new windows, generated when saved
-  room: string;                   // Room where window is located
-  type: string;                   // Window type from API
-  quantity: number;               // Number of windows
-  cost: number;                   // Cost per window
-  width?: number;                 // Window width (optional)
-  height?: number;                // Window height (optional)
-  glass_specification?: string;   // Glass type/specification
-  paint_finish?: string;          // Paint finish option
-  hardware_finish?: string;       // Hardware finish option
-  extras?: any[];                 // Selected extras for this window
-  options?: number | string[];    // Options (flexible format)
-  finish?: string;                // General finish option
-  additional_info?: string;       // Additional notes/information
-  [key: string]: any;            // Allow additional properties
+  id?: string; // Optional for new windows, generated when saved
+  room: string; // Room where window is located
+  type: string; // Window type from API
+  quantity: number; // Number of windows
+  cost: number; // Cost per window
+  width?: number; // Window width (optional)
+  height?: number; // Window height (optional)
+  glass_specification?: string; // Glass type/specification
+  paint_finish?: string; // Paint finish option
+  hardware_finish?: string; // Hardware finish option
+  extras?: any[]; // Selected extras for this window
+  options?: number | string[]; // Options (flexible format)
+  finish?: string; // General finish option
+  additional_info?: string; // Additional notes/information
+  [key: string]: any; // Allow additional properties
 }
 
 export interface CustomerInfo {

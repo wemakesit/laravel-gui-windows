@@ -37,7 +37,8 @@ export default function ReviewStep({
   // Validation effect - review step is valid if we have customer info and windows
   useEffect(() => {
     if (validateStep) {
-      const hasCustomerInfo = formData.customerInfo &&
+      const hasCustomerInfo =
+        formData.customerInfo &&
         formData.customerInfo.first_name &&
         formData.customerInfo.last_name &&
         formData.customerInfo.email;

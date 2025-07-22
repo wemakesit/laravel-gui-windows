@@ -28,7 +28,9 @@ export default function Wizard({
 }: WizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [highestStepReached, setHighestStepReached] = useState(1);
-  const [stepValidation, setStepValidation] = useState<{ [key: number]: boolean }>({});
+  const [stepValidation, setStepValidation] = useState<{
+    [key: number]: boolean;
+  }>({});
 
   // Form data state
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({});
@@ -36,7 +38,9 @@ export default function Wizard({
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [selectedCaveats, setSelectedCaveats] = useState<string[]>([]);
-  const [currentWindowIndex, setCurrentWindowIndex] = useState<number | null>(null);
+  const [currentWindowIndex, setCurrentWindowIndex] = useState<number | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modal state
@@ -99,15 +103,13 @@ export default function Wizard({
     setCustomerInfo(data);
   };
 
-
-
   // Window management functions for WindowSelectionStep
   const addWindow = (window: WindowItem) => {
     setWindows(prev => [...prev, window]);
   };
 
   const updateWindow = (index: number, window: WindowItem) => {
-    setWindows(prev => prev.map((w, i) => i === index ? window : w));
+    setWindows(prev => prev.map((w, i) => (i === index ? window : w)));
   };
 
   const removeWindow = (index: number) => {
@@ -128,15 +130,20 @@ export default function Wizard({
 
     try {
       // Calculate totals
-      const windowCount = windows.reduce((total, window) => total + (window.quantity || 1), 0);
+      const windowCount = windows.reduce(
+        (total, window) => total + (window.quantity || 1),
+        0
+      );
       const totalAmount = windows.reduce((total, window) => {
         const basePrice = window.cost || 0;
-        const extrasTotal = window.extras?.reduce((sum, extra) => sum + extra.cost, 0) || 0;
+        const extrasTotal =
+          window.extras?.reduce((sum, extra) => sum + extra.cost, 0) || 0;
         return total + (basePrice + extrasTotal) * (window.quantity || 1);
       }, 0);
 
       // Create customer name
-      const customerName = `${customerInfo.first_name || ''} ${customerInfo.last_name || ''}`.trim();
+      const customerName =
+        `${customerInfo.first_name || ''} ${customerInfo.last_name || ''}`.trim();
 
       // Save to PouchDB
       const savedEstimate = await pouchDBService.saveEstimate({
@@ -242,17 +249,17 @@ export default function Wizard({
   return (
     <AuthenticatedLayout
       header={
-        <h2 className="text-xl font-semibold leading-tight text-gray-800">
+        <h2 className='text-xl font-semibold leading-tight text-gray-800'>
           Create New Estimate
         </h2>
       }
     >
-      <Head title="Create Estimate" />
+      <Head title='Create Estimate' />
 
-      <div className="py-12">
-        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-            <div className="p-6">
+      <div className='py-12'>
+        <div className='mx-auto max-w-7xl sm:px-6 lg:px-8'>
+          <div className='overflow-hidden bg-white shadow-sm sm:rounded-lg'>
+            <div className='p-6'>
               {/* Wizard Progress */}
               <WizardProgress
                 currentStep={currentStep}
@@ -262,9 +269,7 @@ export default function Wizard({
               />
 
               {/* Current Step Content */}
-              <div className="mt-8">
-                {renderCurrentStep()}
-              </div>
+              <div className='mt-8'>{renderCurrentStep()}</div>
 
               {/* Navigation */}
               <WizardNavigation
@@ -282,25 +287,23 @@ export default function Wizard({
 
       {/* Modal */}
       {modalData && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div className='fixed inset-0 z-50 overflow-y-auto'>
+          <div className='flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0'>
             {/* Background overlay */}
             <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              className='fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity'
               onClick={() => setModalData(null)}
             />
 
             {/* Modal panel */}
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
-              <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
-                    <h3 className="text-lg font-medium leading-6 text-gray-900">
+            <div className='inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle'>
+              <div className='bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4'>
+                <div className='sm:flex sm:items-start'>
+                  <div className='mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left'>
+                    <h3 className='text-lg font-medium leading-6 text-gray-900'>
                       {modalData.title}
                     </h3>
-                    <div className="mt-4">
-                      {modalData.content}
-                    </div>
+                    <div className='mt-4'>{modalData.content}</div>
                   </div>
                 </div>
               </div>

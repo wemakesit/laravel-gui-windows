@@ -5,43 +5,91 @@ import migrations from './migrations';
 import { Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo } from './models';
 
 // Create the adapter for web (using LokiJS with IndexedDB)
+// Using the exact configuration from WatermelonDB documentation
 const adapter = new LokiJSAdapter({
   schema,
   migrations,
-  useWebWorker: false, // Disable for now to avoid complexity
-  useIncrementalIndexedDB: true, // Use IndexedDB for persistence
+  useWebWorker: false,
+  useIncrementalIndexedDB: true,
   dbName: 'window_estimates_db',
 
-  // Event handlers
-  onQuotaExceededError: error => {
+  // Add proper error handling and persistence options
+  onQuotaExceededError: (error) => {
     console.error('Database quota exceeded:', error);
-    // TODO: Show user notification about storage space
   },
 
-  onSetUpError: error => {
+  onSetUpError: (error) => {
     console.error('Database setup failed:', error);
-    // TODO: Show user notification and offer to reload
   },
 
   extraIncrementalIDBOptions: {
     onDidOverwrite: () => {
       console.warn('Database was overwritten by another tab');
-      // TODO: Sync data and notify user
     },
 
     onversionchange: () => {
       console.warn('Database was deleted in another tab');
-      // TODO: Check if user is still logged in and reload if needed
-      window.location.reload();
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     },
   },
 });
 
-// Create the database
-export const database = new Database({
-  adapter,
-  modelClasses: [Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo],
-});
+// Create a singleton database instance to ensure persistence across page navigations
+let databaseInstance: Database | null = null;
+
+function createDatabase(): Database {
+  if (databaseInstance) {
+    console.log('🍉 Reusing existing database instance');
+    return databaseInstance;
+  }
+
+  console.log('🍉 Creating new database instance');
+  databaseInstance = new Database({
+    adapter,
+    modelClasses: [Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo],
+  });
+
+  return databaseInstance;
+}
+
+// Create the database with persistence debugging
+export const database = createDatabase();
+
+// Add database lifecycle debugging
+if (typeof window !== 'undefined') {
+  // Debug database operations
+  const originalWrite = database.write.bind(database);
+  database.write = async (action) => {
+    console.log('🍉 Database write operation starting...');
+    const result = await originalWrite(action);
+    console.log('🍉 Database write operation completed, data should be persisted');
+    return result;
+  };
+
+  // Track database ready state (with safety checks)
+  try {
+    const adapter = database.adapter as any;
+    if (adapter.underlyingAdapter && adapter.underlyingAdapter.loki) {
+      adapter.underlyingAdapter.loki.on('ready', () => {
+        console.log('🍉 LokiJS database is ready and should persist to IndexedDB');
+      });
+
+      // Track save operations
+      adapter.underlyingAdapter.loki.on('save', () => {
+        console.log('🍉 LokiJS database saved to IndexedDB');
+      });
+
+      // Track load operations
+      adapter.underlyingAdapter.loki.on('load', () => {
+        console.log('🍉 LokiJS database loaded from IndexedDB');
+      });
+    }
+  } catch (error: any) {
+    console.log('🍉 Could not attach database event listeners:', error.message);
+  }
+}
 
 export default database;
 

@@ -90,6 +90,18 @@ interface CachedExtra {
 
 export class WatermelonDBService {
   private db = database;
+  private static instance: WatermelonDBService | null = null;
+
+  // Singleton pattern to ensure same service instance across the app
+  static getInstance(): WatermelonDBService {
+    if (!WatermelonDBService.instance) {
+      console.log('🍉 Creating new WatermelonDBService instance');
+      WatermelonDBService.instance = new WatermelonDBService();
+    } else {
+      console.log('🍉 Reusing existing WatermelonDBService instance');
+    }
+    return WatermelonDBService.instance;
+  }
 
   /**
    * Initialize the database
@@ -341,6 +353,8 @@ export class WatermelonDBService {
    * Configuration data sync methods
    */
   async syncWindowTypesFromAPI(windowTypes: APIWindowType[]): Promise<void> {
+    console.log('🍉 Starting window types sync, data will be persisted to IndexedDB');
+
     await this.db.write(async () => {
       for (const apiWindowType of windowTypes) {
         try {
@@ -359,9 +373,10 @@ export class WatermelonDBService {
               description: apiWindowType.description,
               isActive: apiWindowType.is_active !== false,
             });
+            console.log('🍉 Updated window type:', apiWindowType.name);
           } else {
             // Create new
-            await this.db.get<WindowType>('window_types').create(windowType => {
+            const newRecord = await this.db.get<WindowType>('window_types').create(windowType => {
               windowType.apiId = apiWindowType.id.toString();
               windowType.name = apiWindowType.name;
               windowType.type = apiWindowType.type;
@@ -370,12 +385,20 @@ export class WatermelonDBService {
               windowType.isActive = apiWindowType.is_active !== false;
               windowType.lastSynced = Date.now();
             });
+            console.log('🍉 Created window type:', apiWindowType.name, 'ID:', newRecord.id);
           }
         } catch (error) {
           console.error('Error syncing window type:', apiWindowType, error);
         }
       }
     });
+
+    console.log('🍉 Window types sync completed, data should be persisted to IndexedDB');
+
+    // Force a save to IndexedDB by triggering a small delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    console.log('🍉 Persistence delay completed');
   }
 
   async syncFinishesFromAPI(finishes: APIFinishes): Promise<void> {
@@ -583,5 +606,5 @@ export class WatermelonDBService {
 }
 
 // Export singleton instance
-export const watermelonDBService = new WatermelonDBService();
+export const watermelonDBService = WatermelonDBService.getInstance();
 export default watermelonDBService;

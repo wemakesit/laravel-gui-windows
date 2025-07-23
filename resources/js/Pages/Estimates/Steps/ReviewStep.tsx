@@ -64,7 +64,7 @@ export default function ReviewStep({
   const calculateWindowTotal = window => {
     const basePrice = window.cost || 0;
     const extrasTotal =
-      window.extras?.reduce((total, extra) => total + extra.cost, 0) || 0;
+      window.extras?.reduce((total, extra) => total + (extra.cost || 0), 0) || 0;
     return (basePrice + extrasTotal) * (window.quantity || 1);
   };
 
@@ -210,7 +210,7 @@ export default function ReviewStep({
                         >
                           <span className='text-gray-600'>{extra.name}</span>
                           <span className='text-gray-900'>
-                            £{extra.cost.toFixed(2)}
+                            £{(extra.cost || 0).toFixed(2)}
                           </span>
                         </li>
                       ))}

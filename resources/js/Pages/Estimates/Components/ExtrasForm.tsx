@@ -25,7 +25,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
       const extraData = extras.extras.find(e => e.Name === name);
       return {
         name,
-        cost: extraData.Cost,
+        cost: extraData?.Cost || 0,
       };
     });
 
@@ -69,7 +69,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
                     {extra.Name}
                   </span>
                   <span className='text-sm text-gray-500'>
-                    £{extra.Cost.toFixed(2)}
+                    £{(extra.Cost || 0).toFixed(2)}
                   </span>
                 </label>
               </div>
@@ -90,7 +90,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
               <li key={index} className='flex justify-between'>
                 <span className='text-sm text-gray-600'>{extra.name}</span>
                 <span className='text-sm font-medium text-gray-900'>
-                  £{extra.cost.toFixed(2)}
+                  £{(extra.cost || 0).toFixed(2)}
                 </span>
               </li>
             ))}
@@ -102,7 +102,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
             <span className='text-sm font-medium text-gray-900'>
               £
               {formData.extras
-                .reduce((total, extra) => total + extra.cost, 0)
+                .reduce((total, extra) => total + (extra.cost || 0), 0)
                 .toFixed(2)}
             </span>
           </div>

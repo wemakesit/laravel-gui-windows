@@ -306,7 +306,7 @@ export default function Wizard({
       const totalAmount = windows.reduce((total, window) => {
         const basePrice = window.cost || 0;
         const extrasTotal =
-          window.extras?.reduce((sum, extra) => sum + extra.cost, 0) || 0;
+          window.extras?.reduce((sum, extra) => sum + (extra.cost || 0), 0) || 0;
         return total + (basePrice + extrasTotal) * (window.quantity || 1);
       }, 0);
 

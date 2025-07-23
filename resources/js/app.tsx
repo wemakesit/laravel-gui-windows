@@ -6,11 +6,17 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
+console.log('App: Starting app.tsx initialization...');
+
 // Initialize PWA Service
+console.log('App: Importing PWA Service...');
 import { pwaService } from './Services/PWAService';
+console.log('App: PWA Service imported successfully');
 
 // Initialize WatermelonDB
+console.log('App: Importing WatermelonDB Service...');
 import { watermelonDBService } from './Services/WatermelonDBService';
+console.log('App: WatermelonDB Service imported successfully');
 
 // Register service worker from Vite PWA plugin
 import { registerSW } from 'virtual:pwa-register';
@@ -28,12 +34,17 @@ interface ImportMeta {
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 // Initialize services
+console.log('App: About to initialize services...');
 console.log('App: PWA Service initialized', pwaService);
+console.log('App: PWA Service type:', typeof pwaService);
+console.log('App: PWA Service methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(pwaService)));
 
 // Initialize WatermelonDB
+console.log('App: Initializing WatermelonDB...');
 watermelonDBService.initialize().catch(error => {
   console.error('Failed to initialize WatermelonDB:', error);
 });
+console.log('App: WatermelonDB initialization started');
 
 // Expose services to window for testing immediately
 if (typeof window !== 'undefined') {

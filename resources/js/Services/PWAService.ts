@@ -2,9 +2,13 @@
  * PWA Service for managing offline functionality, service worker, and app installation
  */
 
+console.log('PWA: PWAService.ts file is being loaded...');
+
 import { watermelonDBService } from './WatermelonDBService';
 import { configSyncService } from './ConfigSyncService';
 import { Workbox } from 'workbox-window';
+
+console.log('PWA: All imports loaded successfully');
 
 // Utility to check if user is authenticated
 function isUserAuthenticated(): boolean {
@@ -635,4 +639,6 @@ class PWAService {
 }
 
 // Export singleton instance
+console.log('PWA: Creating PWAService singleton instance...');
 export const pwaService = new PWAService();
+console.log('PWA: PWAService singleton instance created successfully:', pwaService);

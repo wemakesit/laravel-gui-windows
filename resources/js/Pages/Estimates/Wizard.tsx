@@ -315,6 +315,16 @@ export default function Wizard({
         `${customerInfo.first_name || ''} ${customerInfo.last_name || ''}`.trim();
 
       // Save to WatermelonDB
+      console.log('Wizard: Creating customer with data:', {
+        name: customerName,
+        email: customerInfo.email || null,
+        phone: customerInfo.phone || null,
+        addressLine1: customerInfo.address || null,
+        city: customerInfo.city || null,
+        postcode: customerInfo.postcode || null,
+        country: customerInfo.country || null,
+      });
+
       const customer = await watermelonDBService.createCustomer({
         name: customerName,
         email: customerInfo.email || null,
@@ -325,18 +335,42 @@ export default function Wizard({
         country: customerInfo.country || null,
       });
 
+      console.log('Wizard: Customer created:', customer.id);
+
       const estimate = await watermelonDBService.createEstimate(customer.id);
+      console.log('Wizard: Estimate created:', estimate.id);
 
       // Add windows to the estimate
       for (const window of windows) {
-        await watermelonDBService.addWindowToEstimate(estimate.id, window);
+        console.log('Wizard: Adding window to estimate:', window);
+
+        // Map window data to the format expected by WatermelonDB
+        const windowData = {
+          room: window.room,
+          windowType: window.type, // Map 'type' to 'windowType'
+          width: window.width || null,
+          height: window.height || null,
+          quantity: window.quantity || 1,
+          finish: window.finish || null,
+          glassType: window.glass_specification || null,
+          openingType: window.opening_type || null,
+          notes: window.additional_info || null,
+          options: window.options || null,
+          extras: window.extras || [],
+        };
+
+        console.log('Wizard: Mapped window data:', windowData);
+        await watermelonDBService.addWindowToEstimate(estimate.id, windowData);
       }
 
       // Update estimate with total amount
+      console.log('Wizard: Updating estimate amounts:', { totalAmount, finalAmount: totalAmount });
       await estimate.updateAmounts({
         totalAmount,
         finalAmount: totalAmount,
       });
+
+      console.log('Wizard: Estimate saved successfully, redirecting to:', `/estimates/${estimate.id}`);
 
       // Redirect to the estimate details page
       window.location.href = `/estimates/${estimate.id}`;

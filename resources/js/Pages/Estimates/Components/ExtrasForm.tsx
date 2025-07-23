@@ -13,22 +13,30 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
   );
 
   const handleExtraToggle = extra => {
+    // Get the name field - handle both Name and name formats
+    const extraName = extra.Name || extra.name || `extra_${Date.now()}`;
+    console.log('ExtrasForm: Toggling extra with name:', extraName);
+
     const newSelectedExtras = { ...selectedExtras };
 
-    if (newSelectedExtras[extra.Name]) {
-      delete newSelectedExtras[extra.Name];
+    if (newSelectedExtras[extraName]) {
+      delete newSelectedExtras[extraName];
+      console.log('ExtrasForm: Deselected extra:', extraName);
     } else {
-      newSelectedExtras[extra.Name] = true;
+      newSelectedExtras[extraName] = true;
+      console.log('ExtrasForm: Selected extra:', extraName);
     }
 
     setSelectedExtras(newSelectedExtras);
+    console.log('ExtrasForm: Updated selected extras:', newSelectedExtras);
 
     // Update the extras array in formData
     const newExtras = Object.keys(newSelectedExtras).map(name => {
-      const extraData = extras.extras.find(e => e.Name === name);
+      const extraData = extras.extras.find(e => (e.Name || e.name) === name);
+      console.log('ExtrasForm: Found extra data for', name, ':', extraData);
       return {
         name,
-        cost: extraData?.Cost || 0,
+        cost: extraData?.Cost || extraData?.cost || 0,
       };
     });
 
@@ -55,8 +63,13 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
             {extras.extras.map((extra, index) => {
               console.log(`ExtrasForm: Extra ${index}:`, extra);
               console.log(`ExtrasForm: Extra Name field:`, extra.Name);
+              console.log(`ExtrasForm: Extra name field:`, extra.name);
               console.log(`ExtrasForm: Extra Cost field:`, extra.Cost);
+              console.log(`ExtrasForm: Extra cost field:`, extra.cost);
               console.log(`ExtrasForm: All extra keys:`, Object.keys(extra));
+
+              const extraName = extra.Name || extra.name || `extra_${index}`;
+              console.log(`ExtrasForm: Using extraName:`, extraName);
 
               return (
                 <div key={index} className='flex items-center'>
@@ -64,7 +77,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
                     id={`extra-${index}`}
                     name={`extra-${index}`}
                     type='checkbox'
-                    checked={!!selectedExtras[extra.Name]}
+                    checked={!!selectedExtras[extraName]}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       handleExtraToggle(extra)
                     }
@@ -75,7 +88,7 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
                     className='ml-3 flex justify-between w-full'
                   >
                     <span className='text-sm font-medium text-gray-700'>
-                      {extra.Name || extra.name || 'Unknown Extra'}
+                      {extraName}
                     </span>
                     <span className='text-sm text-gray-500'>
                       £{(extra.Cost || extra.cost || 0).toFixed(2)}

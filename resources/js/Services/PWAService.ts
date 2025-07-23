@@ -52,6 +52,7 @@ class PWAService {
 
   constructor() {
     console.log('PWA: PWAService constructor called');
+    console.log('PWA: Starting initialization...');
     this.init();
   }
 
@@ -60,6 +61,8 @@ class PWAService {
    */
   private async init() {
     console.log('PWA: Initializing PWA Service...');
+    console.log('PWA: Current location:', window.location.href);
+    console.log('PWA: Is secure context:', this.isSecureContext());
 
     // Check if we're in a secure context (HTTPS or localhost)
     if (!this.isSecureContext()) {
@@ -73,7 +76,8 @@ class PWAService {
       console.log(
         'PWA: Skipping service worker registration in insecure context'
       );
-      return;
+      console.log('PWA: Continuing with configuration sync setup...');
+      // Don't return - continue with configuration sync setup
     }
 
     // Register service worker using Workbox (check if sw.js exists)
@@ -90,49 +94,50 @@ class PWAService {
           console.log(
             'PWA: Service worker will be available after building the application'
           );
+          console.log(
+            'PWA: Skipping service worker registration but continuing with configuration sync setup'
+          );
           // In development, we can still register basic offline functionality
           // but skip the full service worker registration
-          return;
-        }
+        } else {
+          // For tests, we'll register a minimal service worker
+          if (isTest) {
+            console.log('PWA: Test environment detected - registering minimal service worker');
+            try {
+              const registration = await navigator.serviceWorker.register('/test-sw.js', {
+                scope: '/'
+              });
+              console.log('PWA: Test service worker registered successfully');
+              this.serviceWorker = registration.active || registration.installing || registration.waiting;
+            } catch (error) {
+              console.log('PWA: Test service worker not available, continuing with Workbox registration');
+            }
+          } else {
+            console.log('PWA: Registering service worker with Workbox...');
+            this.wb = new Workbox('/sw.js');
 
-        // For tests, we'll register a minimal service worker
-        if (isTest) {
-          console.log('PWA: Test environment detected - registering minimal service worker');
-          try {
-            const registration = await navigator.serviceWorker.register('/test-sw.js', {
-              scope: '/'
+            this.wb.addEventListener('installed', event => {
+              console.log('PWA: Service worker installed', event);
             });
-            console.log('PWA: Test service worker registered successfully');
-            this.serviceWorker = registration.active || registration.installing || registration.waiting;
-            return;
-          } catch (error) {
-            console.log('PWA: Test service worker not available, continuing with Workbox registration');
+
+            this.wb.addEventListener('waiting', event => {
+              console.log('PWA: Service worker waiting', event);
+              // Show update available notification
+            });
+
+            this.wb.addEventListener('controlling', event => {
+              console.log('PWA: Service worker controlling', event);
+              window.location.reload();
+            });
+
+            await this.wb.register();
+            console.log('PWA: Service Worker registered successfully with Workbox');
+
+            // Get the service worker instance
+            const registration = await navigator.serviceWorker.ready;
+            this.serviceWorker = registration.active;
           }
         }
-
-        console.log('PWA: Registering service worker with Workbox...');
-        this.wb = new Workbox('/sw.js');
-
-        this.wb.addEventListener('installed', event => {
-          console.log('PWA: Service worker installed', event);
-        });
-
-        this.wb.addEventListener('waiting', event => {
-          console.log('PWA: Service worker waiting', event);
-          // Show update available notification
-        });
-
-        this.wb.addEventListener('controlling', event => {
-          console.log('PWA: Service worker controlling', event);
-          window.location.reload();
-        });
-
-        await this.wb.register();
-        console.log('PWA: Service Worker registered successfully with Workbox');
-
-        // Get the service worker instance
-        const registration = await navigator.serviceWorker.ready;
-        this.serviceWorker = registration.active;
       } catch (error) {
         console.error('PWA: Service Worker registration failed:', error);
         console.log(

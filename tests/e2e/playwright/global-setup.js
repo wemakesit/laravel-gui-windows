@@ -27,21 +27,49 @@ async function globalSetup() {
 
     // Clear any existing test data
     console.log('🧹 Clearing existing test data...');
+
+    // Fill login form
     await page.fill('#email', 'test@example.com');
     await page.fill('#password', 'password');
-    await page.click('text=Log in');
 
-    // Wait for login to complete - it might redirect to root first
-    try {
-      await page.waitForURL('**/dashboard', { timeout: 5000 });
-    } catch {
-      // If not redirected to dashboard, navigate there manually
-      console.log(
-        "⚠️  Login didn't redirect to dashboard, navigating manually..."
-      );
-      await page.goto('http://localhost:8888/dashboard');
-      await page.waitForSelector('h2', { timeout: 5000 });
+    // Submit the form by clicking the "Log in" button and wait for navigation
+    console.log('🔐 Submitting login form...');
+
+    // Use Promise.all to wait for both the click and the navigation
+    await Promise.all([
+      page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 10000 }),
+      page.click('text=Log in'),
+    ]);
+
+    console.log('✅ Login form submitted, current URL:', page.url());
+
+    // Check if we're redirected properly
+    if (page.url().includes('/login')) {
+      // Still on login page, check for errors
+      const errorElements = await page.$$('.text-red-600, .error, [role="alert"]');
+      if (errorElements.length > 0) {
+        const errorText = await errorElements[0].textContent();
+        console.log('❌ Login error:', errorText);
+        throw new Error(`Login failed: ${errorText}`);
+      } else {
+        console.log('❌ Login failed: Still on login page but no visible errors');
+        throw new Error('Login failed: No redirect occurred');
+      }
     }
+
+    // If we get here, login was successful
+    console.log('✅ Login successful, current URL:', page.url());
+
+    // Ensure we're on the dashboard (we should be after successful login)
+    if (!page.url().includes('/dashboard')) {
+      console.log('⚠️  Not on dashboard, navigating there...');
+      await page.goto('http://localhost:8888/dashboard');
+      await page.waitForLoadState('networkidle');
+    }
+
+    // Verify we can see the dashboard content
+    await page.waitForSelector('h1, h2, [data-testid="dashboard"]', { timeout: 5000 });
+    console.log('✅ Dashboard loaded successfully');
 
     // Clear WatermelonDB data if the clear function exists
     try {
@@ -61,10 +89,10 @@ async function globalSetup() {
     // Seed some basic test data if needed
     console.log('🌱 Seeding basic test data...');
 
-    // Create a test user session that will be available for all tests
-    await page.goto('http://localhost:8888/dashboard');
-    await page.waitForSelector('h2', { timeout: 5000 });
+    // Save authentication state for reuse in tests
+    await context.storageState({ path: 'tests/e2e/playwright/.auth/user.json' });
 
+    // We're already on the dashboard and logged in, so we're ready for tests
     console.log('✅ Global setup completed successfully');
   } catch (error) {
     console.error('❌ Global setup failed:', error);

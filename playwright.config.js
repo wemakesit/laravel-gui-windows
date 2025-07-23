@@ -51,7 +51,10 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/playwright/.auth/user.json',
+      },
     },
     // Temporarily disabled Firefox for WatermelonDB compatibility
     // {
@@ -60,17 +63,26 @@ export default defineConfig({
     // },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: 'tests/e2e/playwright/.auth/user.json',
+      },
     },
 
     // Mobile testing
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
+      use: {
+        ...devices['Pixel 5'],
+        storageState: 'tests/e2e/playwright/.auth/user.json',
+      },
     },
     {
       name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
+      use: {
+        ...devices['iPhone 12'],
+        storageState: 'tests/e2e/playwright/.auth/user.json',
+      },
     },
 
     // Surface Pro testing (for touch interface)
@@ -78,6 +90,7 @@ export default defineConfig({
       name: 'Surface Pro',
       use: {
         ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/playwright/.auth/user.json',
         viewport: { width: 1368, height: 912 },
         hasTouch: true,
       },

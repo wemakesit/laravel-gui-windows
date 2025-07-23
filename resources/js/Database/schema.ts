@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 1,
+  version: 2,
   tables: [
     tableSchema({
       name: 'customers',
@@ -63,13 +63,17 @@ export const schema = appSchema({
     tableSchema({
       name: 'extras',
       columns: [
-        { name: 'estimate_id', type: 'string', isIndexed: true },
+        { name: 'estimate_id', type: 'string', isOptional: true, isIndexed: true }, // null for config extras
+        { name: 'api_id', type: 'string', isOptional: true, isIndexed: true }, // for config extras from API
         { name: 'name', type: 'string' },
         { name: 'description', type: 'string', isOptional: true },
-        { name: 'quantity', type: 'number' },
+        { name: 'quantity', type: 'number', isOptional: true }, // null for config extras
         { name: 'unit_price', type: 'number' },
-        { name: 'total_price', type: 'number' },
+        { name: 'total_price', type: 'number', isOptional: true }, // null for config extras
         { name: 'category', type: 'string', isOptional: true },
+        { name: 'is_config', type: 'boolean' }, // true for config extras, false for estimate extras
+        { name: 'is_active', type: 'boolean', isOptional: true }, // for config extras
+        { name: 'last_synced', type: 'number', isOptional: true }, // for config extras
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -90,6 +94,45 @@ export const schema = appSchema({
         { name: 'mime_type', type: 'string', isOptional: true },
         { name: 'caption', type: 'string', isOptional: true },
         { name: 'is_synced', type: 'boolean' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'window_types',
+      columns: [
+        { name: 'api_id', type: 'string', isIndexed: true }, // ID from API
+        { name: 'name', type: 'string' },
+        { name: 'type', type: 'string' }, // API field name
+        { name: 'cost', type: 'number' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'last_synced', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'finishes',
+      columns: [
+        { name: 'api_id', type: 'string', isIndexed: true }, // ID from API
+        { name: 'name', type: 'string' },
+        { name: 'category', type: 'string' }, // glass_specifications, paint_finishes, hardware_finishes
+        { name: 'cost', type: 'number' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'last_synced', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+
+    tableSchema({
+      name: 'company_info',
+      columns: [
+        { name: 'key', type: 'string', isIndexed: true }, // single record with key 'default'
+        { name: 'data', type: 'string' }, // JSON string of company info
+        { name: 'last_synced', type: 'number' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

@@ -11,139 +11,137 @@ test.describe('WatermelonDB Storage', () => {
     page.on('console', msg => console.log('BROWSER:', msg.text()));
     page.on('pageerror', error => console.log('PAGE ERROR:', error.message));
 
-    // Login before each test
-    await page.goto('/login');
-    await page.fill('#email', 'test@example.com');
-    await page.fill('#password', 'password');
-    await page.click('text=Log in');
-
-    // Wait for login to complete - it might redirect to root first
-    try {
-      await page.waitForURL('/dashboard', { timeout: 5000 });
-    } catch {
-      // If not redirected to dashboard, navigate there manually
-      await page.goto('/dashboard');
-      await page.waitForSelector('h2', { timeout: 5000 });
-    }
+    // Navigate to dashboard to ensure we're authenticated and ready
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should store estimates in WatermelonDB', async ({ page }) => {
-    // Create an estimate
-    await page.goto('/estimates/create');
-
-    // Fill customer information
-    await page.fill('#first_name', 'Storage');
-    await page.fill('#last_name', 'Test');
-    await page.fill('#email', 'storage@test.com');
-    await page.fill('#phone', '01234567890');
-
-    // Handle address - try postcode first, then manual entry
-    await page.fill('#postcode', 'SW1A 1AA');
-
-    // Wait a moment for postcode lookup, then use manual entry
-    await page.waitForTimeout(2000);
-    await page.click('text=Enter Address Manually');
-    await page.waitForSelector('#address', { state: 'visible' });
-    await page.fill('#address', '123 Storage Street\nStorage City\nST1 2OR');
-
-    // Verify form is filled and proceed
-    await expect(page.locator('#first_name')).toHaveValue('Storage');
-    await expect(page.locator('#last_name')).toHaveValue('Test');
-    await page.click('text=Next');
-
-    // Add a window using the modal form
-    await page.click('button:has-text("Add Window")');
-    await page.waitForSelector('input[name="room"]', { state: 'visible' });
-
-    // Fill window details in modal using Combobox inputs
-    await page.click('input[name="room"]');
-    await page.fill('input[name="room"]', 'Living Room');
-    await page.keyboard.press('Enter');
-
-    await page.click('input[name="type"]');
-    await page.fill('input[name="type"]', 'Casement');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-
-    await page.fill('input[name="quantity"]', '1');
-    await page.click('button:has-text("Save Window")');
-
-    // Wait for modal to close
-    await page.waitForSelector('input[name="room"]', { state: 'hidden' });
-
-    // Wait for window to be added to the list
-    await page.waitForSelector('text=Living Room', { state: 'visible' });
-
-    // Step 3: Window Configuration
-    await page.click('text=Next');
-    await page.click('button:has-text("Configure")');
-    await page.waitForSelector('#glass_specification', { state: 'visible' });
-
-    // Configure the window with required fields
-    await page.selectOption('#glass_specification', { index: 1 }); // Select first option
-    await page.selectOption('#paint_finish', { index: 1 }); // Select first option
-    await page.selectOption('#hardware_finish', { index: 1 }); // Select first option
-    await page.click('button:has-text("Save Configuration")');
-
-    // Wait for configuration to be saved and modal to close
-    await page.waitForSelector('text=Clear Double Glazed', {
-      state: 'visible',
-    });
-
-    // Step 4: Extras Selection (skip)
-    await page.click('text=Next');
-
-    // Step 5: Review and Generate
-    await page.click('text=Next');
-
-    // Wait for the Generate Estimate button to be enabled
-    await page.waitForSelector(
-      'button:has-text("Generate Estimate"):not([disabled])',
-      {
-        timeout: 15000,
-      }
-    );
-
-    await page.click('button:has-text("Generate Estimate")');
-
-    // Verify that the estimate was created by checking the dashboard
+    // Navigate to dashboard to verify WatermelonDB is working
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
-    // Wait for dashboard to load and check for estimate data
-    await page.waitForSelector('h2', { state: 'visible' });
+    // Wait for WatermelonDB to be initialized (we can see it in the logs)
+    await page.waitForTimeout(3000);
 
-    // Check if estimate count is greater than 0 (indicating data was stored)
-    const dashboardData = await page.evaluate(() => {
-      // Look for any indication that estimates exist
-      const totalEstimatesElement = document.querySelector(
-        '[data-testid="total-estimates"]'
-      );
-      if (totalEstimatesElement) {
+    // Test WatermelonDB configuration sync and data operations
+    const testResult = await page.evaluate(async () => {
+      try {
+        // Test 1: Sync configuration data
+        const windowTypesData = [
+          { id: 1, name: 'Test Window Type', type: 'casement', cost: 350, is_active: true },
+        ];
+
+        await window.watermelonDBService.syncWindowTypesFromAPI(windowTypesData);
+
+        // Test 2: Verify data was stored
+        const storedWindowTypes = await window.watermelonDBService.getCachedWindowTypes();
+
+        // Test 3: Create a customer
+        const customer = await window.watermelonDBService.createCustomer({
+          name: 'Test Customer',
+          email: 'test@example.com',
+          phone: '01234567890',
+          address: '123 Test Street',
+        });
+
+        // Test 4: Create an estimate
+        const estimate = await window.watermelonDBService.createEstimate(customer.id);
+
+        // Test 5: Get all estimates
+        const estimates = await window.watermelonDBService.getAllEstimates();
+
         return {
-          totalEstimates: parseInt(totalEstimatesElement.textContent) || 0,
+          success: true,
+          windowTypesCount: storedWindowTypes.length,
+          customerId: customer.id,
+          estimateId: estimate.id,
+          estimatesCount: estimates.length,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message,
         };
       }
+    });
 
-      // Alternative: check if there are any estimate-related elements
-      const estimateElements = document.querySelectorAll(
-        '[data-testid*="estimate"], .estimate-item, tbody tr'
-      );
+    console.log('WatermelonDB test result:', testResult);
+
+    // Verify the test results
+    expect(testResult.success).toBe(true);
+    expect(testResult.windowTypesCount).toBeGreaterThan(0);
+    expect(testResult.customerId).toBeDefined();
+    expect(testResult.estimateId).toBeDefined();
+    expect(testResult.estimatesCount).toBeGreaterThan(0);
+
+    console.log('WatermelonDB functionality test passed successfully');
+
+    // Test basic WatermelonDB functionality by navigating to estimates page
+    await page.goto('/estimates');
+    await page.waitForLoadState('networkidle');
+
+    // Verify the estimates page loads (this uses WatermelonDB to load estimates)
+    await page.waitForSelector('h1:has-text("Window Estimates")', { state: 'visible' });
+
+    // Check that the page loaded successfully
+    const estimatesPageLoaded = await page.evaluate(() => {
       return {
-        totalEstimates: estimateElements.length,
-        hasEstimateElements: estimateElements.length > 0,
+        hasHeader: document.querySelector('h1') !== null,
+        hasWindowEstimatesText: document.querySelector('h1')?.textContent?.includes('Window Estimates') || false,
+        hasEstimatesTable: document.querySelector('table') !== null || document.querySelector('.estimate-item') !== null,
+        pageLoaded: true,
       };
     });
 
-    // Verify that WatermelonDB stored the estimate data
-    expect(dashboardData.totalEstimates).toBeGreaterThanOrEqual(0); // At minimum, should not error
+    expect(estimatesPageLoaded.hasHeader).toBe(true);
+    expect(estimatesPageLoaded.hasWindowEstimatesText).toBe(true);
+    expect(estimatesPageLoaded.pageLoaded).toBe(true);
+
+    console.log('WatermelonDB estimates page loaded successfully');
   });
 
   test('should load estimates from WatermelonDB when offline', async ({
     page,
     context,
   }) => {
-    // First, create an estimate while online
+    // Import the test helper
+    const { syncConfigurationData, waitForConfigurationToLoad } = await import('./helpers/watermelondb-test-helper.js');
+
+    // Navigate to dashboard first to ensure WatermelonDB is initialized
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    // First, navigate to the estimates create page
     await page.goto('/estimates/create');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    // Sync configuration data from API to WatermelonDB (simulating initial online sync)
+    await syncConfigurationData(page);
+
+    // Verify configuration data was synced properly
+    const configData = await page.evaluate(async () => {
+      const windowTypes = await window.watermelonDBService.getCachedWindowTypes();
+      const finishes = await window.watermelonDBService.getCachedFinishes();
+      const extras = await window.watermelonDBService.getCachedExtras();
+
+      return {
+        windowTypes: windowTypes.length,
+        glassSpecs: finishes.glass_specifications?.length || 0,
+        paintFinishes: finishes.paint_finishes?.length || 0,
+        hardwareFinishes: finishes.hardware_finishes?.length || 0,
+        extras: extras.length,
+      };
+    });
+
+    console.log('Configuration data after sync:', configData);
+
+    // Refresh the page to reload the configuration in the UI
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
     await page.fill('#first_name', 'Offline');
     await page.fill('#last_name', 'Test');
     await page.fill('#email', 'offline@test.com');
@@ -179,6 +177,9 @@ test.describe('WatermelonDB Storage', () => {
     await page.click('text=Next');
     await page.click('button:has-text("Configure")');
     await page.waitForSelector('#glass_specification', { state: 'visible' });
+
+    // Wait for configuration data to be loaded in UI
+    await waitForConfigurationToLoad(page);
 
     // Configure the window with required fields
     await page.selectOption('#glass_specification', { index: 1 }); // Select first option
@@ -235,8 +236,21 @@ test.describe('WatermelonDB Storage', () => {
     page,
     context,
   }) => {
+    // Import the test helper
+    const { syncConfigurationData } = await import('./helpers/watermelondb-test-helper.js');
+
+    // Navigate to dashboard first to ensure WatermelonDB is initialized
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+
+    // Sync configuration data from API to WatermelonDB (simulating initial online sync)
+    await syncConfigurationData(page);
+
     // First create an estimate while online, then test offline access
     await page.goto('/estimates/create');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Fill customer information
     await page.fill('#first_name', 'Sync');

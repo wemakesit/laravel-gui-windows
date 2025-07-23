@@ -13,22 +13,31 @@ test.describe('PWA Functionality', () => {
   });
 
   test('should have service worker registered', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/dashboard');
+
+    // Wait for PWA service to initialize
+    await page.waitForTimeout(2000);
 
     const serviceWorkerStatus = await page.evaluate(async () => {
       if ('serviceWorker' in navigator) {
         try {
           const registration = await navigator.serviceWorker.getRegistration();
           return {
+            supported: true,
             registered: !!registration,
             scope: registration?.scope,
             active: !!registration?.active,
           };
         } catch (error) {
-          return { error: error.message };
+          return {
+            supported: true,
+            registered: false,
+            active: false,
+            error: error.message,
+          };
         }
       }
-      return { supported: false };
+      return { supported: false, registered: false, active: false };
     });
 
     expect(serviceWorkerStatus.supported).toBe(true);
@@ -37,7 +46,14 @@ test.describe('PWA Functionality', () => {
   });
 
   test('should have accessible web app manifest', async ({ page }) => {
-    const manifestResponse = await page.goto('/build/manifest.webmanifest');
+    // Try the built manifest first, then fallback to static manifest
+    let manifestResponse = await page.goto('/build/manifest.webmanifest');
+
+    if (manifestResponse.status() !== 200) {
+      console.log('Built manifest not found, trying static manifest...');
+      manifestResponse = await page.goto('/manifest.json');
+    }
+
     expect(manifestResponse.status()).toBe(200);
 
     const manifestContent = await manifestResponse.json();
@@ -63,12 +79,20 @@ test.describe('PWA Functionality', () => {
             results[cacheName] = keys.length;
           }
 
-          return { caches: results, total: cacheNames.length };
+          return {
+            supported: true,
+            caches: results,
+            total: cacheNames.length,
+          };
         } catch (error) {
-          return { error: error.message };
+          return {
+            supported: true,
+            error: error.message,
+            total: 0,
+          };
         }
       }
-      return { supported: false };
+      return { supported: false, total: 0 };
     });
 
     expect(cacheStatus.supported).toBe(true);

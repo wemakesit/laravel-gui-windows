@@ -9,11 +9,13 @@ use Inertia\Inertia;
 
 // Authentication required routes
 Route::middleware('auth')->group(function () {
-    // Main dashboard route
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    // Main dashboard route - using /dashboard as primary for consistency
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Legacy dashboard route for compatibility
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.legacy');
+    // Root route redirects to dashboard
+    Route::get('/', function () {
+        return redirect()->route('dashboard');
+    });
 
     // Estimate Routes
     Route::get('/estimates', [EstimateController::class, 'index'])->name('estimates.index');

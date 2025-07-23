@@ -9,8 +9,84 @@ import database, {
   Window,
   Extra,
   Photo,
+  WindowType,
+  Finish,
+  CompanyInfo,
 } from '../Database';
 import type { CustomerInfo, WindowItem } from '../types/wizard';
+
+// API data interfaces
+interface APIWindowType {
+  id: number;
+  name: string;
+  type: string;
+  cost?: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface APIFinish {
+  id: number;
+  name: string;
+  cost?: number;
+  description?: string;
+  is_active?: boolean;
+}
+
+interface APIFinishes {
+  glass_specifications?: APIFinish[];
+  paint_finishes?: APIFinish[];
+  hardware_finishes?: APIFinish[];
+}
+
+interface APIExtra {
+  id: number;
+  name: string;
+  cost?: number;
+  description?: string;
+  category?: string;
+  is_active?: boolean;
+}
+
+interface APICompanyInfo {
+  name?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  vat_number?: string;
+  registration_number?: string;
+}
+
+// Return type interfaces
+interface CachedWindowType {
+  id: string;
+  name: string;
+  type: string;
+  cost: number;
+  description?: string;
+}
+
+interface CachedFinishes {
+  glass_specifications: CachedFinish[];
+  paint_finishes: CachedFinish[];
+  hardware_finishes: CachedFinish[];
+}
+
+interface CachedFinish {
+  id: string;
+  name: string;
+  cost: number;
+  description?: string;
+}
+
+interface CachedExtra {
+  id: string;
+  name: string;
+  cost: number;
+  description?: string;
+  category?: string;
+}
 
 export class WatermelonDBService {
   private db = database;
@@ -140,7 +216,8 @@ export class WatermelonDBService {
         window.glassType = windowData.glassType || null;
         window.openingType = windowData.openingType || null;
         window.notes = windowData.notes || null;
-        window.options = windowData.options || null;
+        // Ensure options is properly typed as string[] | null
+        window.options = Array.isArray(windowData.options) ? windowData.options : null;
       });
     });
   }
@@ -169,7 +246,10 @@ export class WatermelonDBService {
         if (updates.openingType !== undefined)
           w.openingType = updates.openingType;
         if (updates.notes !== undefined) w.notes = updates.notes;
-        if (updates.options !== undefined) w.options = updates.options;
+        if (updates.options !== undefined) {
+          // Ensure options is properly typed as string[] | null
+          w.options = Array.isArray(updates.options) ? updates.options : null;
+        }
       });
     });
   }
@@ -255,6 +335,250 @@ export class WatermelonDBService {
     ]);
 
     return { customers, estimates, windows, photos };
+  }
+
+  /**
+   * Configuration data sync methods
+   */
+  async syncWindowTypesFromAPI(windowTypes: APIWindowType[]): Promise<void> {
+    await this.db.write(async () => {
+      for (const apiWindowType of windowTypes) {
+        try {
+          // Try to find existing record
+          const existing = await this.db
+            .get<WindowType>('window_types')
+            .query(Q.where('api_id', apiWindowType.id.toString()))
+            .fetch();
+
+          if (existing.length > 0) {
+            // Update existing
+            await existing[0].updateFromAPI({
+              name: apiWindowType.name,
+              type: apiWindowType.type,
+              cost: apiWindowType.cost || 0,
+              description: apiWindowType.description,
+              isActive: apiWindowType.is_active !== false,
+            });
+          } else {
+            // Create new
+            await this.db.get<WindowType>('window_types').create(windowType => {
+              windowType.apiId = apiWindowType.id.toString();
+              windowType.name = apiWindowType.name;
+              windowType.type = apiWindowType.type;
+              windowType.cost = apiWindowType.cost || 0;
+              windowType.description = apiWindowType.description || null;
+              windowType.isActive = apiWindowType.is_active !== false;
+              windowType.lastSynced = Date.now();
+            });
+          }
+        } catch (error) {
+          console.error('Error syncing window type:', apiWindowType, error);
+        }
+      }
+    });
+  }
+
+  async syncFinishesFromAPI(finishes: APIFinishes): Promise<void> {
+    await this.db.write(async () => {
+      // Process each category of finishes
+      const categories = ['glass_specifications', 'paint_finishes', 'hardware_finishes'];
+
+      for (const category of categories) {
+        if (finishes[category] && Array.isArray(finishes[category])) {
+          for (const apiFinish of finishes[category]) {
+            try {
+              // Try to find existing record
+              const existing = await this.db
+                .get<Finish>('finishes')
+                .query(
+                  Q.where('api_id', apiFinish.id.toString()),
+                  Q.where('category', category)
+                )
+                .fetch();
+
+              if (existing.length > 0) {
+                // Update existing
+                await existing[0].updateFromAPI({
+                  name: apiFinish.name,
+                  category,
+                  cost: apiFinish.cost || 0,
+                  description: apiFinish.description,
+                  isActive: apiFinish.is_active !== false,
+                });
+              } else {
+                // Create new
+                await this.db.get<any>('finishes').create(finish => {
+                  finish.apiId = apiFinish.id.toString();
+                  finish.name = apiFinish.name;
+                  finish.category = category;
+                  finish.cost = apiFinish.cost || 0;
+                  finish.description = apiFinish.description || null;
+                  finish.isActive = apiFinish.is_active !== false;
+                  finish.lastSynced = Date.now();
+                });
+              }
+            } catch (error) {
+              console.error('Error syncing finish:', apiFinish, error);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  async syncExtrasFromAPI(extras: APIExtra[]): Promise<void> {
+    await this.db.write(async () => {
+      for (const apiExtra of extras) {
+        try {
+          // Try to find existing config extra record
+          const existing = await this.db
+            .get<Extra>('extras')
+            .query(
+              Q.where('api_id', apiExtra.id.toString()),
+              Q.where('is_config', true)
+            )
+            .fetch();
+
+          if (existing.length > 0) {
+            // Update existing
+            await existing[0].updateFromAPI({
+              name: apiExtra.name,
+              cost: apiExtra.cost || 0,
+              description: apiExtra.description,
+              category: apiExtra.category,
+              isActive: apiExtra.is_active !== false,
+            });
+          } else {
+            // Create new config extra
+            await this.db.get<Extra>('extras').create(extra => {
+              extra.apiId = apiExtra.id.toString();
+              extra.estimateId = null; // Config extras don't belong to estimates
+              extra.name = apiExtra.name;
+              extra.description = apiExtra.description || null;
+              extra.quantity = null; // Config extras don't have quantity
+              extra.unitPrice = apiExtra.cost || 0;
+              extra.totalPrice = null; // Config extras don't have total price
+              extra.category = apiExtra.category || null;
+              extra.isConfig = true;
+              extra.isActive = apiExtra.is_active !== false;
+              extra.lastSynced = Date.now();
+            });
+          }
+        } catch (error) {
+          console.error('Error syncing extra:', apiExtra, error);
+        }
+      }
+    });
+  }
+
+  async syncCompanyInfoFromAPI(companyInfo: APICompanyInfo): Promise<void> {
+    await this.db.write(async () => {
+      try {
+        // Try to find existing record
+        const existing = await this.db
+          .get<CompanyInfo>('company_info')
+          .query(Q.where('key', 'default'))
+          .fetch();
+
+        if (existing.length > 0) {
+          // Update existing
+          await existing[0].updateFromAPI(companyInfo);
+        } else {
+          // Create new
+          await this.db.get<CompanyInfo>('company_info').create(info => {
+            info.key = 'default';
+            info.data = JSON.stringify(companyInfo);
+            info.lastSynced = Date.now();
+          });
+        }
+      } catch (error) {
+        console.error('Error syncing company info:', companyInfo, error);
+      }
+    });
+  }
+
+  /**
+   * Get cached configuration data
+   */
+  async getCachedWindowTypes(): Promise<CachedWindowType[]> {
+    // Get all active window types
+    // Note: Using manual filter instead of Q.where('is_active', true) due to WatermelonDB boolean query issue
+    // This is a known limitation where boolean queries don't work reliably in some WatermelonDB versions
+    const allWindowTypes = await this.db
+      .get<any>('window_types')
+      .query()
+      .fetch();
+
+    // Filter for active window types manually
+    const windowTypes = allWindowTypes.filter(wt => wt.isActive === true);
+
+    return windowTypes.map(wt => ({
+      id: wt.apiId,
+      name: wt.name,
+      type: wt.type,
+      cost: wt.cost,
+      description: wt.description,
+    }));
+  }
+
+  async getCachedFinishes(): Promise<CachedFinishes> {
+    // Get all finishes and filter manually for active ones
+    const allFinishes = await this.db
+      .get<any>('finishes')
+      .query()
+      .fetch();
+
+    const finishes = allFinishes.filter(f => f.isActive === true);
+
+    const result: CachedFinishes = {
+      glass_specifications: [],
+      paint_finishes: [],
+      hardware_finishes: [],
+    };
+
+    for (const finish of finishes) {
+      if (result[finish.category]) {
+        result[finish.category].push({
+          id: finish.apiId,
+          name: finish.name,
+          cost: finish.cost,
+          description: finish.description,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async getCachedExtras(): Promise<CachedExtra[]> {
+    // Get all extras and filter manually for active config extras
+    const allExtras = await this.db
+      .get<Extra>('extras')
+      .query()
+      .fetch();
+
+    const extras = allExtras.filter(extra => extra.isConfig === true && extra.isActive === true);
+
+    return extras.map(extra => ({
+      id: extra.apiId,
+      name: extra.name,
+      cost: extra.unitPrice,
+      description: extra.description,
+      category: extra.category,
+    }));
+  }
+
+  async getCachedCompanyInfo(): Promise<Record<string, any>> {
+    const companyInfoRecords = await this.db
+      .get<CompanyInfo>('company_info')
+      .query(Q.where('key', 'default'))
+      .fetch();
+
+    if (companyInfoRecords.length > 0) {
+      return companyInfoRecords[0].getCompanyData();
+    }
+
+    return {};
   }
 }
 

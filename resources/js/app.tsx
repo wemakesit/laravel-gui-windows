@@ -35,6 +35,24 @@ watermelonDBService.initialize().catch(error => {
   console.error('Failed to initialize WatermelonDB:', error);
 });
 
+// Expose services to window for testing immediately
+if (typeof window !== 'undefined') {
+  console.log('Exposing services to window for testing');
+  (window as any).watermelonDBService = watermelonDBService;
+  (window as any).pwaService = pwaService;
+  console.log('Services exposed:', {
+    watermelonDBService: !!watermelonDBService,
+    pwaService: !!pwaService
+  });
+
+  // Also expose after a short delay to ensure they're available
+  setTimeout(() => {
+    (window as any).watermelonDBService = watermelonDBService;
+    (window as any).pwaService = pwaService;
+    console.log('Services re-exposed after delay');
+  }, 100);
+}
+
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
   registerSW({

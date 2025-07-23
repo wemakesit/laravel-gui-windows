@@ -2,7 +2,7 @@ import { Database } from '@nozbe/watermelondb';
 import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
 import schema from './schema';
 import migrations from './migrations';
-import { Customer, Estimate, Window, Extra, Photo } from './models';
+import { Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo } from './models';
 
 // Create the adapter for web (using LokiJS with IndexedDB)
 const adapter = new LokiJSAdapter({
@@ -40,10 +40,10 @@ const adapter = new LokiJSAdapter({
 // Create the database
 export const database = new Database({
   adapter,
-  modelClasses: [Customer, Estimate, Window, Extra, Photo],
+  modelClasses: [Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo],
 });
 
 export default database;
 
 // Export types for convenience
-export type { Customer, Estimate, Window, Extra, Photo };
+export type { Customer, Estimate, Window, Extra, Photo, WindowType, Finish, CompanyInfo };

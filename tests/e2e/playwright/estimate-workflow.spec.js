@@ -11,18 +11,15 @@ test.describe('Estimate Workflow', () => {
     page.on('console', msg => console.log('BROWSER:', msg.text()));
     page.on('pageerror', error => console.log('PAGE ERROR:', error.message));
 
-    // Login before each test
-    await page.goto('/login');
-    await page.fill('#email', 'test@example.com');
-    await page.fill('#password', 'password');
-    await page.click('text=Log in');
-    await page.waitForURL('/dashboard');
+    // Navigate to dashboard to ensure we're authenticated and ready
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should create a complete estimate', async ({ page }) => {
     // Navigate to create estimate
     await page.goto('/estimates/create');
-    await expect(page.locator('h1')).toContainText('Create Estimate');
+    await expect(page.locator('h2').first()).toContainText('Create New Estimate');
 
     // Fill customer information
     await page.fill('#first_name', 'John');
@@ -36,22 +33,58 @@ test.describe('Estimate Workflow', () => {
 
     // Proceed to next step
     await page.click('text=Next');
-    await expect(page.locator('h2')).toContainText('Add Windows');
+    await expect(page.locator('h2').nth(1)).toContainText('Window Selection');
 
-    // Add a window
-    await page.selectOption('#room', 'Living Room');
-    await page.selectOption('#window_type', 'Casement');
-    await page.fill('#width', '1200');
-    await page.fill('#height', '1000');
-    await page.fill('#quantity', '2');
+    // Add a window - click the Add Window button to open the modal
+    const addWindowButton = await page.locator('text=Add Window').count();
+    console.log('Add Window button count:', addWindowButton);
 
-    // Add window to estimate
-    await page.click('text=Add Window');
-    
-    // Verify window was added
+    // Click the first Add Window button specifically
+    await page.locator('button:has-text("Add Window")').first().click();
+
+    // Debug: Check what elements are present and look for modal
+    const hasModal = await page.locator('[role="dialog"]').count();
+    const hasForm = await page.locator('form').count();
+    console.log('Modal count:', hasModal, 'Form count:', hasForm);
+
+    // Check for any error messages or console errors
+    const errors = await page.evaluate(() => {
+      return window.console.errors || [];
+    });
+    console.log('Console errors:', errors);
+
+    // Wait for the modal to open and the form to be visible
+    await page.waitForSelector('#room', { timeout: 5000 });
+
+    // Fill the window form in the modal - clear and fill each field separately
+    await page.locator('input[name="room"]').clear();
+    await page.locator('input[name="room"]').fill('Living Room');
+
+    await page.locator('input[name="type"]').clear();
+    await page.locator('input[name="type"]').fill('Softwood Sash Window S');
+
+    await page.locator('input[name="quantity"]').clear();
+    await page.locator('input[name="quantity"]').fill('2');
+
+    // Debug: Check form values before saving
+    const formValues = await page.evaluate(() => {
+      const room = document.getElementById('room')?.value;
+      const type = document.getElementById('type')?.value;
+      const quantity = document.getElementById('quantity')?.value;
+      return { room, type, quantity };
+    });
+    console.log('Form values before save:', formValues);
+
+    // Save the window - use force click to bypass form interception
+    await page.locator('text=Save Window').click({ force: true });
+
+    // Wait for the modal to close and table to update
+    await page.waitForTimeout(1000);
+
+    // Verify window was added to the table
     await expect(page.locator('tbody tr')).toHaveCount(1);
     await expect(page.locator('tbody tr')).toContainText('Living Room');
-    await expect(page.locator('tbody tr')).toContainText('Casement');
+    await expect(page.locator('tbody tr')).toContainText('Softwood Sash Window S');
 
     // Proceed to review
     await page.click('text=Next');

@@ -20,25 +20,22 @@ class EstimateCreateController extends Controller
 
     /**
      * Display the estimate wizard.
+     * Configuration data should be loaded from frontend cache/WatermelonDB.
+     * API is only used for PDF generation, not estimate creation.
      */
     public function index(Request $request): InertiaResponse
     {
-        // Get all the necessary data for the wizard
-        $windowTypes = $this->apiService->getWindowTypes();
-        $extras = $this->apiService->getExtras();
-        $finishes = $this->apiService->getFinishes();
-        $companyInfo = $this->apiService->getCompanyInfo();
-        $pdfTextConfig = $this->apiService->getPdfTextConfig();
-        $options = $this->apiService->getOptions();
-
+        // Provide minimal default data - the frontend will load cached configuration
+        // from WatermelonDB/localStorage and handle offline functionality
         return Inertia::render('Estimates/Wizard', [
-            'windowTypes' => $windowTypes,
-            'extras' => $extras,
-            'finishes' => $finishes,
-            'companyInfo' => $companyInfo,
-            'pdfTextConfig' => $pdfTextConfig,
-            'options' => $options,
+            'windowTypes' => [], // Will be loaded from frontend cache
+            'extras' => [], // Will be loaded from frontend cache
+            'finishes' => [], // Will be loaded from frontend cache
+            'companyInfo' => [], // Will be loaded from frontend cache
+            'pdfTextConfig' => [], // Will be loaded from frontend cache
+            'options' => [], // Will be loaded from frontend cache
             'loadedEstimate' => null, // No estimate loaded by default
+            'useOfflineMode' => true, // Indicate this should work offline
         ]);
     }
 

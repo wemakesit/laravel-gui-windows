@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 
 export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
+  console.log('ExtrasForm: Received extras data:', extras);
+  console.log('ExtrasForm: Extras structure:', JSON.stringify(extras, null, 2));
+
   const [formData, setFormData] = useState(windowData);
   const [selectedExtras, setSelectedExtras] = useState(
     windowData.extras?.reduce((acc, extra) => {
@@ -49,31 +52,38 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
 
         {extras?.extras?.length > 0 ? (
           <div className='space-y-4'>
-            {extras.extras.map((extra, index) => (
-              <div key={index} className='flex items-center'>
-                <input
-                  id={`extra-${index}`}
-                  name={`extra-${index}`}
-                  type='checkbox'
-                  checked={!!selectedExtras[extra.Name]}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleExtraToggle(extra)
-                  }
-                  className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
-                />
-                <label
-                  htmlFor={`extra-${index}`}
-                  className='ml-3 flex justify-between w-full'
-                >
-                  <span className='text-sm font-medium text-gray-700'>
-                    {extra.Name}
-                  </span>
-                  <span className='text-sm text-gray-500'>
-                    £{(extra.Cost || 0).toFixed(2)}
-                  </span>
-                </label>
-              </div>
-            ))}
+            {extras.extras.map((extra, index) => {
+              console.log(`ExtrasForm: Extra ${index}:`, extra);
+              console.log(`ExtrasForm: Extra Name field:`, extra.Name);
+              console.log(`ExtrasForm: Extra Cost field:`, extra.Cost);
+              console.log(`ExtrasForm: All extra keys:`, Object.keys(extra));
+
+              return (
+                <div key={index} className='flex items-center'>
+                  <input
+                    id={`extra-${index}`}
+                    name={`extra-${index}`}
+                    type='checkbox'
+                    checked={!!selectedExtras[extra.Name]}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleExtraToggle(extra)
+                    }
+                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                  />
+                  <label
+                    htmlFor={`extra-${index}`}
+                    className='ml-3 flex justify-between w-full'
+                  >
+                    <span className='text-sm font-medium text-gray-700'>
+                      {extra.Name || extra.name || 'Unknown Extra'}
+                    </span>
+                    <span className='text-sm text-gray-500'>
+                      £{(extra.Cost || extra.cost || 0).toFixed(2)}
+                    </span>
+                  </label>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className='text-gray-500'>No extras available.</p>

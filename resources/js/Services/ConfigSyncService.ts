@@ -6,7 +6,8 @@
 import { watermelonDBService } from './WatermelonDBService';
 
 export class ConfigSyncService {
-  private readonly API_BASE_URL = 'http://localhost:8000/api/v1';
+  // Use Laravel's proxy endpoints to avoid CORS issues
+  private readonly API_BASE_URL = '/api-proxy';
 
   /**
    * Sync all configuration data from API
@@ -35,14 +36,14 @@ export class ConfigSyncService {
    */
   async syncWindowTypes(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/config/window_types`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/window_types`);
       if (!response.ok) {
         throw new Error(`Failed to fetch window types: ${response.statusText}`);
       }
 
       const data = await response.json();
       await watermelonDBService.syncWindowTypesFromAPI(data.window_types || []);
-      
+
       console.log('Window types synced successfully');
     } catch (error) {
       console.error('Failed to sync window types:', error);
@@ -55,14 +56,14 @@ export class ConfigSyncService {
    */
   async syncFinishes(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/config/finishes`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/finishes`);
       if (!response.ok) {
         throw new Error(`Failed to fetch finishes: ${response.statusText}`);
       }
 
       const data = await response.json();
       await watermelonDBService.syncFinishesFromAPI(data);
-      
+
       console.log('Finishes synced successfully');
     } catch (error) {
       console.error('Failed to sync finishes:', error);
@@ -75,14 +76,14 @@ export class ConfigSyncService {
    */
   async syncExtras(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/config/extras`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/extras`);
       if (!response.ok) {
         throw new Error(`Failed to fetch extras: ${response.statusText}`);
       }
 
       const data = await response.json();
       await watermelonDBService.syncExtrasFromAPI(data.extras || []);
-      
+
       console.log('Extras synced successfully');
     } catch (error) {
       console.error('Failed to sync extras:', error);
@@ -95,14 +96,14 @@ export class ConfigSyncService {
    */
   async syncCompanyInfo(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/config/company_info`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/company_info`);
       if (!response.ok) {
         throw new Error(`Failed to fetch company info: ${response.statusText}`);
       }
 
       const data = await response.json();
       await watermelonDBService.syncCompanyInfoFromAPI(data);
-      
+
       console.log('Company info synced successfully');
     } catch (error) {
       console.error('Failed to sync company info:', error);

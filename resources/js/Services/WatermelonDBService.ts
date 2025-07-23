@@ -28,11 +28,12 @@ interface APIWindowType {
 }
 
 interface APIFinish {
-  id: number;
+  id?: number;
   name: string;
-  cost?: number;
+  cost_multiplier?: number;  // API uses cost_multiplier instead of cost
   description?: string;
   is_active?: boolean;
+  color_code?: string;  // Some finishes have color codes
 }
 
 interface APIFinishes {
@@ -416,11 +417,15 @@ export class WatermelonDBService {
         if (finishes[category] && Array.isArray(finishes[category])) {
           for (const apiFinish of finishes[category]) {
             try {
+              // Generate a consistent ID based on the name since API doesn't provide ID
+              const generatedId = apiFinish.id?.toString() ||
+                `${category}_${apiFinish.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+
               // Try to find existing record
               const existing = await this.db
                 .get<Finish>('finishes')
                 .query(
-                  Q.where('api_id', apiFinish.id.toString()),
+                  Q.where('api_id', generatedId),
                   Q.where('category', category)
                 )
                 .fetch();
@@ -430,17 +435,17 @@ export class WatermelonDBService {
                 await existing[0].updateFromAPI({
                   name: apiFinish.name,
                   category,
-                  cost: apiFinish.cost || 0,
+                  cost: apiFinish.cost_multiplier || 1, // Use cost_multiplier from API
                   description: apiFinish.description,
                   isActive: apiFinish.is_active !== false,
                 });
               } else {
                 // Create new
                 await this.db.get<any>('finishes').create(finish => {
-                  finish.apiId = apiFinish.id.toString();
+                  finish.apiId = generatedId;
                   finish.name = apiFinish.name;
                   finish.category = category;
-                  finish.cost = apiFinish.cost || 0;
+                  finish.cost = apiFinish.cost_multiplier || 1; // Use cost_multiplier from API
                   finish.description = apiFinish.description || null;
                   finish.isActive = apiFinish.is_active !== false;
                   finish.lastSynced = Date.now();

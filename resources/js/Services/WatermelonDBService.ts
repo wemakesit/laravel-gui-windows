@@ -53,10 +53,21 @@ interface APIExtra {
 
 interface APICompanyInfo {
   name?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
+  address?: {
+    line1?: string;
+    line2?: string;
+  };
+  contact?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+  };
+  sales_contact?: {
+    name?: string;
+    title?: string;
+    phone?: string;
+    email?: string;
+  };
   vat_number?: string;
   registration_number?: string;
 }

@@ -46,7 +46,13 @@ export class ConfigSyncService {
       const url = `${this.API_BASE_URL}/api/v1/config/window_types`;
       console.log('ConfigSync: Fetching from URL:', url);
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        credentials: 'include', // Include session cookies for authentication
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       console.log('ConfigSync: Window types response status:', response.status);
       console.log('ConfigSync: Window types response headers:', Object.fromEntries(response.headers.entries()));
 
@@ -79,7 +85,13 @@ export class ConfigSyncService {
    */
   async syncFinishes(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/finishes`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/finishes`, {
+        credentials: 'include', // Include session cookies for authentication
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch finishes: ${response.statusText}`);
       }
@@ -99,7 +111,13 @@ export class ConfigSyncService {
    */
   async syncExtras(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/extras`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/extras`, {
+        credentials: 'include', // Include session cookies for authentication
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch extras: ${response.statusText}`);
       }
@@ -119,7 +137,13 @@ export class ConfigSyncService {
    */
   async syncCompanyInfo(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/company_info`);
+      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/company_info`, {
+        credentials: 'include', // Include session cookies for authentication
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch company info: ${response.statusText}`);
       }

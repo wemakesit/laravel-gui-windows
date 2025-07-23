@@ -87,8 +87,11 @@ export default function Wizard({
         }
 
         if (cachedExtras.length > 0) {
-          // Convert to the format expected by the UI
-          setExtras({ extras: cachedExtras });
+          // Convert to the format expected by the UI - always replace, don't append
+          setExtras({ extras: [...cachedExtras] });
+        } else {
+          // Clear extras if no cached data
+          setExtras({ extras: [] });
         }
 
         if (Object.keys(cachedFinishes).length > 0) {
@@ -192,8 +195,11 @@ export default function Wizard({
           }
 
           if (cachedExtras.length > 0) {
-            // Convert to the format expected by the UI
-            setExtras({ extras: cachedExtras });
+            // Convert to the format expected by the UI - always replace, don't append
+            setExtras({ extras: [...cachedExtras] });
+          } else {
+            // Clear extras if no cached data
+            setExtras({ extras: [] });
           }
 
           if (Object.keys(cachedFinishes).length > 0) {
@@ -338,7 +344,12 @@ export default function Wizard({
       console.log('Wizard: Customer created:', customer.id);
 
       const estimate = await watermelonDBService.createEstimate(customer.id);
-      console.log('Wizard: Estimate created:', estimate.id);
+      console.log('Wizard: Estimate created:', {
+        id: estimate.id,
+        customerId: estimate.customerId,
+        referenceNumber: estimate.referenceNumber,
+        status: estimate.status,
+      });
 
       // Add windows to the estimate
       for (const window of windows) {
@@ -370,10 +381,28 @@ export default function Wizard({
         finalAmount: totalAmount,
       });
 
-      console.log('Wizard: Estimate saved successfully, redirecting to:', `/estimates/${estimate.id}`);
+      console.log('Wizard: Estimate saved successfully, waiting for persistence before redirect...');
 
-      // Redirect to the estimate details page
-      window.location.href = `/estimates/${estimate.id}`;
+      // Wait for data to be persisted to IndexedDB before redirecting
+      // This ensures the estimate will be available when the page loads
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Verify the estimate is actually persisted before redirecting
+      try {
+        const persistedEstimate = await watermelonDBService.getEstimate(estimate.id);
+        if (!persistedEstimate) {
+          console.error('Wizard: Estimate not found after persistence wait, extending wait...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        console.error('Wizard: Error verifying estimate persistence:', error);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      console.log('Wizard: Persistence wait completed, redirecting to:', `/estimates/${estimate.id}`);
+
+      // Redirect to the estimate details page with offline mode flag
+      window.location.href = `/estimates/${estimate.id}?offline=true`;
     } catch (error) {
       console.error('Error saving estimate to WatermelonDB:', error);
       alert('An error occurred while saving the estimate. Please try again.');

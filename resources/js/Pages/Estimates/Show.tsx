@@ -28,11 +28,19 @@ export default function Show({
   useOfflineMode = false,
 }: EstimateShowProps) {
   const [estimate, setEstimate] = useState<EstimateData | null>(null);
-  const [loading, setLoading] = useState(useOfflineMode);
+  const [loading, setLoading] = useState(true); // Always start with loading
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
-    if (useOfflineMode) {
+    // Check URL parameters for offline mode flag
+    const urlParams = new URLSearchParams(window.location.search);
+    const isOfflineMode = useOfflineMode || urlParams.get('offline') === 'true';
+
+    if (isOfflineMode) {
+      loadEstimateFromWatermelonDB();
+    } else {
+      // If not in offline mode, still try to load from WatermelonDB first
+      // This provides better performance and offline-first behavior
       loadEstimateFromWatermelonDB();
     }
   }, [useOfflineMode, estimateId]);
@@ -41,6 +49,10 @@ export default function Show({
     try {
       setLoading(true);
       console.log('Loading estimate from WatermelonDB:', estimateId);
+
+      // Wait a bit for database to be fully initialized
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const estimate = await watermelonDBService.getEstimate(estimateId);
 
       if (!estimate) {
@@ -48,8 +60,28 @@ export default function Show({
         return;
       }
 
-      const customer = await estimate.customer.fetch();
-      const windows = await estimate.windows.fetch();
+      console.log('Show: Estimate found:', {
+        id: estimate.id,
+        customerId: estimate.customerId,
+        referenceNumber: estimate.referenceNumber,
+        status: estimate.status,
+      });
+
+      // Use the new method that handles the persistence issue
+      const customer = await watermelonDBService.getCustomerForEstimate(estimate);
+      const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
+
+      console.log('Show: Customer lookup result:', {
+        customerId: estimate.customerId,
+        customerFound: !!customer,
+        customerName: customer?.name,
+      });
+
+      if (!customer) {
+        console.error('Customer not found for estimate:', estimate.customerId);
+        console.error('This indicates a critical database persistence issue');
+        return;
+      }
 
       // Map WatermelonDB data to expected format
       const estimateData: EstimateData = {

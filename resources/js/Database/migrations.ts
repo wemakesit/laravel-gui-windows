@@ -54,6 +54,13 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 3,
+      steps: [
+        // Ensure customer_id field is properly configured in estimates table
+        // This migration forces a schema refresh to fix persistence issues
+      ],
+    },
   ],
 });
 

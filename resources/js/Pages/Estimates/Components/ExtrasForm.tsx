@@ -60,43 +60,51 @@ export default function ExtrasForm({ windowData, extras, onSave, onCancel }) {
 
         {extras?.extras?.length > 0 ? (
           <div className='space-y-4'>
-            {extras.extras.map((extra, index) => {
-              console.log(`ExtrasForm: Extra ${index}:`, extra);
-              console.log(`ExtrasForm: Extra Name field:`, extra.Name);
-              console.log(`ExtrasForm: Extra name field:`, extra.name);
-              console.log(`ExtrasForm: Extra Cost field:`, extra.Cost);
-              console.log(`ExtrasForm: Extra cost field:`, extra.cost);
-              console.log(`ExtrasForm: All extra keys:`, Object.keys(extra));
+            {extras.extras
+              .filter((extra, index, self) => {
+                // Remove duplicates based on name
+                const extraName = extra.Name || extra.name || `extra_${index}`;
+                return self.findIndex(e => (e.Name || e.name) === extraName) === index;
+              })
+              .map((extra, index) => {
+                console.log(`ExtrasForm: Extra ${index}:`, extra);
+                console.log(`ExtrasForm: Extra Name field:`, extra.Name);
+                console.log(`ExtrasForm: Extra name field:`, extra.name);
+                console.log(`ExtrasForm: Extra Cost field:`, extra.Cost);
+                console.log(`ExtrasForm: Extra cost field:`, extra.cost);
+                console.log(`ExtrasForm: All extra keys:`, Object.keys(extra));
 
-              const extraName = extra.Name || extra.name || `extra_${index}`;
-              console.log(`ExtrasForm: Using extraName:`, extraName);
+                const extraName = extra.Name || extra.name || `extra_${index}`;
+                const uniqueId = `extra-${extraName.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${index}`;
+                console.log(`ExtrasForm: Using extraName:`, extraName);
+                console.log(`ExtrasForm: Using uniqueId:`, uniqueId);
 
-              return (
-                <div key={index} className='flex items-center'>
-                  <input
-                    id={`extra-${index}`}
-                    name={`extra-${index}`}
-                    type='checkbox'
-                    checked={!!selectedExtras[extraName]}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleExtraToggle(extra)
-                    }
-                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
-                  />
-                  <label
-                    htmlFor={`extra-${index}`}
-                    className='ml-3 flex justify-between w-full'
-                  >
-                    <span className='text-sm font-medium text-gray-700'>
-                      {extraName}
-                    </span>
-                    <span className='text-sm text-gray-500'>
-                      £{(extra.Cost || extra.cost || 0).toFixed(2)}
-                    </span>
-                  </label>
-                </div>
-              );
-            })}
+                return (
+                  <div key={uniqueId} className='flex items-center'>
+                    <input
+                      id={uniqueId}
+                      name={uniqueId}
+                      type='checkbox'
+                      checked={!!selectedExtras[extraName]}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleExtraToggle(extra)
+                      }
+                      className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+                    />
+                    <label
+                      htmlFor={uniqueId}
+                      className='ml-3 flex justify-between w-full'
+                    >
+                      <span className='text-sm font-medium text-gray-700'>
+                        {extraName}
+                      </span>
+                      <span className='text-sm text-gray-500'>
+                        £{(extra.Cost || extra.cost || 0).toFixed(2)}
+                      </span>
+                    </label>
+                  </div>
+                );
+              })}
           </div>
         ) : (
           <p className='text-gray-500'>No extras available.</p>

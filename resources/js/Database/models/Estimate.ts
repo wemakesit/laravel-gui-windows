@@ -24,7 +24,7 @@ export default class Estimate extends Model {
     photos: { type: 'has_many', foreignKey: 'estimate_id' },
   } as const;
 
-  @field('customer_id') customerId!: string;
+  @text('customer_id') customerId!: string;
   @text('reference_number') referenceNumber!: string;
   @field('status') status!: string;
   @field('total_amount') totalAmount!: number | null;

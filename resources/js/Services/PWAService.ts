@@ -14,15 +14,31 @@ console.log('PWA: All imports loaded successfully');
 function isUserAuthenticated(): boolean {
   try {
     // Check if we're in a browser environment
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') {
+      console.log('PWA: Not in browser environment');
+      return false;
+    }
 
     // Check if Inertia page data is available
     const inertiaPage = (window as any).page;
-    if (!inertiaPage || !inertiaPage.props) return false;
+    console.log('PWA: Inertia page object:', inertiaPage);
+
+    if (!inertiaPage || !inertiaPage.props) {
+      console.log('PWA: No Inertia page data available');
+      return false;
+    }
+
+    console.log('PWA: Inertia page props:', inertiaPage.props);
+    console.log('PWA: Auth object:', inertiaPage.props.auth);
 
     // Check if user is authenticated
     const user = inertiaPage.props.auth?.user;
-    return user !== null && user !== undefined;
+    console.log('PWA: User object:', user);
+
+    const isAuthenticated = user !== null && user !== undefined;
+    console.log('PWA: Final authentication result:', isAuthenticated);
+
+    return isAuthenticated;
   } catch (error) {
     console.log('PWA: Error checking authentication status:', error);
     return false;
@@ -210,6 +226,17 @@ class PWAService {
         console.log('PWA: Offline - skipping initial configuration sync');
       } else if (!isAuthenticated) {
         console.log('PWA: User not authenticated - skipping initial configuration sync');
+        console.log('PWA: Attempting manual sync for testing...');
+
+        // Try manual sync for debugging
+        configSyncService.syncAllConfiguration()
+          .then(() => {
+            console.log('PWA: Manual configuration sync completed successfully');
+          })
+          .catch(error => {
+            console.error('PWA: Manual configuration sync failed:', error);
+            console.error('PWA: Manual sync error details:', error.stack);
+          });
       }
     }, 1000); // Wait 1 second for Inertia to initialize
 

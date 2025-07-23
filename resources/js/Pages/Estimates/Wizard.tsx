@@ -87,7 +87,8 @@ export default function Wizard({
         }
 
         if (cachedExtras.length > 0) {
-          setExtras(cachedExtras);
+          // Convert to the format expected by the UI
+          setExtras({ extras: cachedExtras });
         }
 
         if (Object.keys(cachedFinishes).length > 0) {
@@ -191,7 +192,8 @@ export default function Wizard({
           }
 
           if (cachedExtras.length > 0) {
-            setExtras(cachedExtras);
+            // Convert to the format expected by the UI
+            setExtras({ extras: cachedExtras });
           }
 
           if (Object.keys(cachedFinishes).length > 0) {

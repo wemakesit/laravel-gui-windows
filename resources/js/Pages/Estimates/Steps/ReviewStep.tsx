@@ -24,9 +24,9 @@ export default function ReviewStep({
 
   // Ensure required data structures exist
   const safeFormData = {
-    customer_details: {},
-    windows: [],
-    selected_caveats: {},
+    customer_details: formData.customerInfo || {},
+    windows: formData.windows || [],
+    selected_caveats: formData.selectedCaveats || {},
     ...formData,
   };
 

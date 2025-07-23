@@ -17,11 +17,13 @@ import type { CustomerInfo, WindowItem } from '../types/wizard';
 
 // API data interfaces
 interface APIWindowType {
-  id: number;
-  name: string;
-  type: string;
-  cost?: number;
-  description?: string;
+  id?: number;
+  Type: string;  // API uses capitalized field names
+  Description?: string;
+  Cost?: number;
+  Unit?: number;
+  Hardware?: number;
+  Image?: string;
   is_active?: boolean;
 }
 
@@ -40,10 +42,10 @@ interface APIFinishes {
 }
 
 interface APIExtra {
-  id: number;
-  name: string;
-  cost?: number;
-  description?: string;
+  id?: number;
+  Name: string;  // API uses capitalized field names
+  Cost?: number;
+  Description?: string;
   category?: string;
   is_active?: boolean;
 }
@@ -358,34 +360,38 @@ export class WatermelonDBService {
     await this.db.write(async () => {
       for (const apiWindowType of windowTypes) {
         try {
+          // Generate a consistent ID based on the Type name since API doesn't provide ID
+          const generatedId = apiWindowType.id?.toString() ||
+            apiWindowType.Type.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
           // Try to find existing record
           const existing = await this.db
             .get<WindowType>('window_types')
-            .query(Q.where('api_id', apiWindowType.id.toString()))
+            .query(Q.where('api_id', generatedId))
             .fetch();
 
           if (existing.length > 0) {
             // Update existing
             await existing[0].updateFromAPI({
-              name: apiWindowType.name,
-              type: apiWindowType.type,
-              cost: apiWindowType.cost || 0,
-              description: apiWindowType.description,
+              name: apiWindowType.Type,
+              type: 'window', // Default type since API doesn't specify
+              cost: apiWindowType.Cost || 0,
+              description: apiWindowType.Description,
               isActive: apiWindowType.is_active !== false,
             });
-            console.log('🍉 Updated window type:', apiWindowType.name);
+            console.log('🍉 Updated window type:', apiWindowType.Type);
           } else {
             // Create new
             const newRecord = await this.db.get<WindowType>('window_types').create(windowType => {
-              windowType.apiId = apiWindowType.id.toString();
-              windowType.name = apiWindowType.name;
-              windowType.type = apiWindowType.type;
-              windowType.cost = apiWindowType.cost || 0;
-              windowType.description = apiWindowType.description || null;
+              windowType.apiId = generatedId;
+              windowType.name = apiWindowType.Type;
+              windowType.type = 'window'; // Default type since API doesn't specify
+              windowType.cost = apiWindowType.Cost || 0;
+              windowType.description = apiWindowType.Description || null;
               windowType.isActive = apiWindowType.is_active !== false;
               windowType.lastSynced = Date.now();
             });
-            console.log('🍉 Created window type:', apiWindowType.name, 'ID:', newRecord.id);
+            console.log('🍉 Created window type:', apiWindowType.Type, 'ID:', newRecord.id);
           }
         } catch (error) {
           console.error('Error syncing window type:', apiWindowType, error);
@@ -453,11 +459,15 @@ export class WatermelonDBService {
     await this.db.write(async () => {
       for (const apiExtra of extras) {
         try {
+          // Generate a consistent ID based on the name since API doesn't provide ID
+          const generatedId = apiExtra.id?.toString() ||
+            apiExtra.Name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
           // Try to find existing config extra record
           const existing = await this.db
             .get<Extra>('extras')
             .query(
-              Q.where('api_id', apiExtra.id.toString()),
+              Q.where('api_id', generatedId),
               Q.where('is_config', true)
             )
             .fetch();
@@ -465,23 +475,23 @@ export class WatermelonDBService {
           if (existing.length > 0) {
             // Update existing
             await existing[0].updateFromAPI({
-              name: apiExtra.name,
-              cost: apiExtra.cost || 0,
-              description: apiExtra.description,
+              name: apiExtra.Name,
+              cost: apiExtra.Cost || 0,
+              description: apiExtra.Description,
               category: apiExtra.category,
               isActive: apiExtra.is_active !== false,
             });
           } else {
             // Create new config extra
             await this.db.get<Extra>('extras').create(extra => {
-              extra.apiId = apiExtra.id.toString();
+              extra.apiId = generatedId;
               extra.estimateId = null; // Config extras don't belong to estimates
-              extra.name = apiExtra.name;
-              extra.description = apiExtra.description || null;
+              extra.name = apiExtra.Name;
+              extra.description = apiExtra.Description || null;
               extra.quantity = null; // Config extras don't have quantity
-              extra.unitPrice = apiExtra.cost || 0;
+              extra.unitPrice = apiExtra.Cost || 0;
               extra.totalPrice = null; // Config extras don't have total price
-              extra.category = apiExtra.category || null;
+              extra.category = apiExtra.category || 'general';
               extra.isConfig = true;
               extra.isActive = apiExtra.is_active !== false;
               extra.lastSynced = Date.now();

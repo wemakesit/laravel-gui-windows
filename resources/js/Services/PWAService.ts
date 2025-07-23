@@ -6,6 +6,25 @@ import { watermelonDBService } from './WatermelonDBService';
 import { configSyncService } from './ConfigSyncService';
 import { Workbox } from 'workbox-window';
 
+// Utility to check if user is authenticated
+function isUserAuthenticated(): boolean {
+  try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return false;
+
+    // Check if Inertia page data is available
+    const inertiaPage = (window as any).page;
+    if (!inertiaPage || !inertiaPage.props) return false;
+
+    // Check if user is authenticated
+    const user = inertiaPage.props.auth?.user;
+    return user !== null && user !== undefined;
+  } catch (error) {
+    console.log('PWA: Error checking authentication status:', error);
+    return false;
+  }
+}
+
 export interface PWAStatus {
   isOnline: boolean;
   isInstalled: boolean;
@@ -148,25 +167,53 @@ class PWAService {
       this.notifyInstallCallbacks(false);
     });
 
-    // Initial configuration sync if online - force sync on app start
-    if (navigator.onLine) {
-      console.log('PWA: Starting automatic configuration sync on app initialization...');
-      configSyncService.syncAllConfiguration().catch(error => {
-        console.error('PWA: Initial configuration sync failed:', error);
-        // Fallback to syncIfNeeded if full sync fails
-        configSyncService.syncIfNeeded().catch(fallbackError => {
-          console.error('PWA: Fallback configuration sync also failed:', fallbackError);
-        });
-      });
-    }
+    // Initial configuration sync if online and authenticated
+    // Delay sync to allow Inertia to initialize
+    setTimeout(() => {
+      const isAuthenticated = isUserAuthenticated();
+      console.log('PWA: Authentication check result:', isAuthenticated);
+      console.log('PWA: Online status:', navigator.onLine);
+      console.log('PWA: Current URL:', window.location.href);
 
-    // Set up periodic configuration sync every 5 minutes when online
+      if (navigator.onLine && isAuthenticated) {
+        console.log('PWA: Starting automatic configuration sync on app initialization...');
+
+        configSyncService.syncAllConfiguration()
+          .then(() => {
+            console.log('PWA: Initial configuration sync completed successfully');
+          })
+          .catch(error => {
+            console.error('PWA: Initial configuration sync failed:', error);
+            console.error('PWA: Error details:', error.stack);
+
+            // Fallback to syncIfNeeded if full sync fails
+            console.log('PWA: Trying fallback sync...');
+            configSyncService.syncIfNeeded()
+              .then(() => {
+                console.log('PWA: Fallback configuration sync completed');
+              })
+              .catch(fallbackError => {
+                console.error('PWA: Fallback configuration sync also failed:', fallbackError);
+                console.error('PWA: Fallback error details:', fallbackError.stack);
+              });
+          });
+      } else if (!navigator.onLine) {
+        console.log('PWA: Offline - skipping initial configuration sync');
+      } else if (!isAuthenticated) {
+        console.log('PWA: User not authenticated - skipping initial configuration sync');
+      }
+    }, 1000); // Wait 1 second for Inertia to initialize
+
+    // Set up periodic configuration sync every 5 minutes when online and authenticated
     setInterval(() => {
-      if (navigator.onLine) {
+      const isAuthenticated = isUserAuthenticated();
+      if (navigator.onLine && isAuthenticated) {
         console.log('PWA: Running periodic configuration sync...');
         configSyncService.syncIfNeeded().catch(error => {
           console.error('PWA: Periodic configuration sync failed:', error);
         });
+      } else if (!isAuthenticated) {
+        console.log('PWA: Skipping periodic sync - user not authenticated');
       }
     }, 5 * 60 * 1000); // 5 minutes
   }
@@ -431,20 +478,27 @@ class PWAService {
     console.log('PWA: Online status changed:', isOnline);
 
     if (isOnline) {
-      console.log('PWA: Back online - triggering automatic sync...');
+      const isAuthenticated = isUserAuthenticated();
+      console.log('PWA: Back online - checking authentication...', isAuthenticated);
 
-      // Trigger sync when coming back online
-      this.syncEstimates();
+      if (isAuthenticated) {
+        console.log('PWA: Back online and authenticated - triggering automatic sync...');
 
-      // Force configuration sync when coming back online
-      console.log('PWA: Running configuration sync after coming back online...');
-      configSyncService.syncAllConfiguration().catch(error => {
-        console.error('PWA: Configuration sync failed after coming online:', error);
-        // Fallback to syncIfNeeded if full sync fails
-        configSyncService.syncIfNeeded().catch(fallbackError => {
-          console.error('PWA: Fallback configuration sync also failed:', fallbackError);
+        // Trigger sync when coming back online
+        this.syncEstimates();
+
+        // Force configuration sync when coming back online
+        console.log('PWA: Running configuration sync after coming back online...');
+        configSyncService.syncAllConfiguration().catch(error => {
+          console.error('PWA: Configuration sync failed after coming online:', error);
+          // Fallback to syncIfNeeded if full sync fails
+          configSyncService.syncIfNeeded().catch(fallbackError => {
+            console.error('PWA: Fallback configuration sync also failed:', fallbackError);
+          });
         });
-      });
+      } else {
+        console.log('PWA: Back online but user not authenticated - skipping sync');
+      }
     }
 
     this.onlineStatusCallbacks.forEach(callback => callback(isOnline));

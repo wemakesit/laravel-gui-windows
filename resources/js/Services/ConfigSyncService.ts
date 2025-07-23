@@ -14,19 +14,25 @@ export class ConfigSyncService {
    */
   async syncAllConfiguration(): Promise<void> {
     try {
-      console.log('Starting configuration sync...');
-      
+      console.log('ConfigSync: Starting configuration sync...');
+      console.log('ConfigSync: API Base URL:', this.API_BASE_URL);
+      console.log('ConfigSync: Online status:', navigator.onLine);
+
       // Sync all configuration data in parallel
-      await Promise.all([
+      const syncPromises = [
         this.syncWindowTypes(),
         this.syncFinishes(),
         this.syncExtras(),
         this.syncCompanyInfo(),
-      ]);
+      ];
 
-      console.log('Configuration sync completed successfully');
+      console.log('ConfigSync: Starting parallel sync of all endpoints...');
+      await Promise.all(syncPromises);
+
+      console.log('ConfigSync: All configuration sync completed successfully');
     } catch (error) {
-      console.error('Configuration sync failed:', error);
+      console.error('ConfigSync: Configuration sync failed:', error);
+      console.error('ConfigSync: Error stack:', error.stack);
       throw error;
     }
   }
@@ -36,17 +42,34 @@ export class ConfigSyncService {
    */
   async syncWindowTypes(): Promise<void> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/api/v1/config/window_types`);
+      console.log('ConfigSync: Starting window types sync...');
+      const url = `${this.API_BASE_URL}/api/v1/config/window_types`;
+      console.log('ConfigSync: Fetching from URL:', url);
+
+      const response = await fetch(url);
+      console.log('ConfigSync: Window types response status:', response.status);
+      console.log('ConfigSync: Window types response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (response.status === 302) {
+        console.error('ConfigSync: Received redirect (302) - likely authentication required');
+        throw new Error('Authentication required - user may not be logged in');
+      }
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch window types: ${response.statusText}`);
+        const responseText = await response.text();
+        console.error('ConfigSync: Error response body:', responseText);
+        throw new Error(`Failed to fetch window types: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('ConfigSync: Window types data received:', data);
+
       await watermelonDBService.syncWindowTypesFromAPI(data.window_types || []);
 
-      console.log('Window types synced successfully');
+      console.log('ConfigSync: Window types synced successfully');
     } catch (error) {
-      console.error('Failed to sync window types:', error);
+      console.error('ConfigSync: Failed to sync window types:', error);
+      console.error('ConfigSync: Window types error stack:', error.stack);
       // Don't throw - allow other syncs to continue
     }
   }

@@ -148,12 +148,27 @@ class PWAService {
       this.notifyInstallCallbacks(false);
     });
 
-    // Initial configuration sync if online
+    // Initial configuration sync if online - force sync on app start
     if (navigator.onLine) {
-      configSyncService.syncIfNeeded().catch(error => {
+      console.log('PWA: Starting automatic configuration sync on app initialization...');
+      configSyncService.syncAllConfiguration().catch(error => {
         console.error('PWA: Initial configuration sync failed:', error);
+        // Fallback to syncIfNeeded if full sync fails
+        configSyncService.syncIfNeeded().catch(fallbackError => {
+          console.error('PWA: Fallback configuration sync also failed:', fallbackError);
+        });
       });
     }
+
+    // Set up periodic configuration sync every 5 minutes when online
+    setInterval(() => {
+      if (navigator.onLine) {
+        console.log('PWA: Running periodic configuration sync...');
+        configSyncService.syncIfNeeded().catch(error => {
+          console.error('PWA: Periodic configuration sync failed:', error);
+        });
+      }
+    }, 5 * 60 * 1000); // 5 minutes
   }
 
   /**
@@ -416,12 +431,19 @@ class PWAService {
     console.log('PWA: Online status changed:', isOnline);
 
     if (isOnline) {
+      console.log('PWA: Back online - triggering automatic sync...');
+
       // Trigger sync when coming back online
       this.syncEstimates();
 
-      // Sync configuration data if needed
-      configSyncService.syncIfNeeded().catch(error => {
-        console.error('PWA: Configuration sync failed:', error);
+      // Force configuration sync when coming back online
+      console.log('PWA: Running configuration sync after coming back online...');
+      configSyncService.syncAllConfiguration().catch(error => {
+        console.error('PWA: Configuration sync failed after coming online:', error);
+        // Fallback to syncIfNeeded if full sync fails
+        configSyncService.syncIfNeeded().catch(fallbackError => {
+          console.error('PWA: Fallback configuration sync also failed:', fallbackError);
+        });
       });
     }
 

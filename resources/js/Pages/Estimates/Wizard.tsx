@@ -120,7 +120,9 @@ export default function Wizard({
 
         if (!hasWindowTypes || !hasExtras || !hasFinishes) {
           setConfigMissing(true);
-          console.warn('Essential configuration data is missing. Please go online to sync data.');
+          console.warn('Essential configuration data is missing. Automatic sync is running...');
+        } else {
+          setConfigMissing(false);
         }
 
         setConfigLoaded(true);
@@ -132,6 +134,18 @@ export default function Wizard({
     };
 
     loadCachedConfig();
+
+    // Set up periodic reload of configuration data to catch automatic syncs
+    const configReloadInterval = setInterval(() => {
+      if (navigator.onLine) {
+        console.log('Wizard: Checking for updated configuration data...');
+        loadCachedConfig();
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => {
+      clearInterval(configReloadInterval);
+    };
   }, []);
 
   // Load estimate data if provided
@@ -426,34 +440,34 @@ export default function Wizard({
             <div className='p-6'>
               {/* Configuration Missing Warning */}
               {configLoaded && configMissing && (
-                <div className='mb-6 rounded-md bg-yellow-50 p-4'>
+                <div className='mb-6 rounded-md bg-blue-50 p-4'>
                   <div className='flex'>
                     <div className='flex-shrink-0'>
-                      <svg className='h-5 w-5 text-yellow-400' viewBox='0 0 20 20' fill='currentColor'>
-                        <path fillRule='evenodd' d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z' clipRule='evenodd' />
+                      <svg className='h-5 w-5 text-blue-400' viewBox='0 0 20 20' fill='currentColor'>
+                        <path fillRule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z' clipRule='evenodd' />
                       </svg>
                     </div>
                     <div className='ml-3'>
-                      <h3 className='text-sm font-medium text-yellow-800'>
-                        Configuration Data Required
+                      <h3 className='text-sm font-medium text-blue-800'>
+                        Loading Configuration Data
                       </h3>
-                      <div className='mt-2 text-sm text-yellow-700'>
+                      <div className='mt-2 text-sm text-blue-700'>
                         <p>
-                          Some configuration data is missing. Please connect to the internet and sync data before creating estimates.
+                          Configuration data is being synced automatically.
+                          {navigator.onLine
+                            ? ' This should complete shortly when connected to the internet.'
+                            : ' Please connect to the internet to enable automatic sync.'
+                          }
                         </p>
                       </div>
                       <div className='mt-4'>
-                        <button
-                          type='button'
-                          onClick={handleSyncConfiguration}
-                          disabled={!navigator.onLine}
-                          className='inline-flex items-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed'
-                        >
-                          <svg className='-ml-0.5 mr-1.5 h-5 w-5' viewBox='0 0 20 20' fill='currentColor'>
-                            <path fillRule='evenodd' d='M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z' clipRule='evenodd' />
+                        <div className='inline-flex items-center text-sm text-blue-600'>
+                          <svg className='animate-spin -ml-0.5 mr-1.5 h-4 w-4' viewBox='0 0 24 24'>
+                            <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' fill='none' />
+                            <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z' />
                           </svg>
-                          {navigator.onLine ? 'Sync Configuration Data' : 'Connect to Internet to Sync'}
-                        </button>
+                          {navigator.onLine ? 'Syncing automatically...' : 'Waiting for internet connection...'}
+                        </div>
                       </div>
                     </div>
                   </div>

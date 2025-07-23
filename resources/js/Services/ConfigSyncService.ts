@@ -130,7 +130,24 @@ export class ConfigSyncService {
       const hasFinishes = Object.keys(finishes).length > 0;
       const hasCompanyInfo = Object.keys(companyInfo).length > 0;
 
-      return !hasWindowTypes || !hasExtras || !hasFinishes || !hasCompanyInfo;
+      const needsSync = !hasWindowTypes || !hasExtras || !hasFinishes || !hasCompanyInfo;
+
+      if (needsSync) {
+        console.log('Configuration sync needed:', {
+          hasWindowTypes,
+          hasExtras,
+          hasFinishes,
+          hasCompanyInfo,
+          windowTypesCount: windowTypes.length,
+          extrasCount: extras.length,
+          finishesCount: Object.keys(finishes).length,
+          companyInfoKeys: Object.keys(companyInfo).length
+        });
+      } else {
+        console.log('Configuration is complete - no sync needed');
+      }
+
+      return needsSync;
     } catch (error) {
       console.error('Error checking sync status:', error);
       return true; // Assume sync is needed if we can't check

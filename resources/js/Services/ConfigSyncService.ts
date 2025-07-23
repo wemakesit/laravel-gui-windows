@@ -6,7 +6,7 @@
 import { watermelonDBService } from './WatermelonDBService';
 
 export class ConfigSyncService {
-  private readonly API_BASE_URL = 'http://localhost:8001/api/v1';
+  private readonly API_BASE_URL = 'http://localhost:8000/api/v1';
 
   /**
    * Sync all configuration data from API

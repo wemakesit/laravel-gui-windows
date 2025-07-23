@@ -47,7 +47,7 @@ class SettingsController extends Controller
     private function getApiDocs()
     {
         try {
-            $baseUrl = env('API_BASE_URL', 'http://localhost:8001');
+            $baseUrl = env('API_BASE_URL', 'http://localhost:8000');
 
             // Just return the URL instead of trying to fetch the content
             return [
@@ -69,7 +69,7 @@ class SettingsController extends Controller
     public function proxyApiRequest(Request $request, $path = '')
     {
         try {
-            $baseUrl = env('API_BASE_URL', 'http://localhost:8001');
+            $baseUrl = env('API_BASE_URL', 'http://localhost:8000');
             $method = strtolower($request->method());
             $url = "$baseUrl/$path";
 

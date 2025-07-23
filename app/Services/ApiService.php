@@ -55,7 +55,7 @@ class ApiService
     public function __construct()
     {
         // Use config instead of env directly for better caching
-        $this->baseUrl = Config::get('services.api.base_url', 'http://localhost:8001');
+        $this->baseUrl = Config::get('services.api.base_url', 'http://localhost:8000');
         $this->maxRetries = Config::get('services.api.max_retries', 3);
         $this->retryDelay = Config::get('services.api.retry_delay', 100);
         $this->apiToken = Config::get('services.api.token');

@@ -49,11 +49,6 @@ Route::get('/pdf-text-config', function (ApiService $apiService) {
     return $apiService->getPdfTextConfig();
 });
 
-// Options
-Route::get('/options', function (ApiService $apiService) {
-    return $apiService->getOptions();
-});
 
-// OS Places API Routes
-Route::get('/address-config', [\App\Http\Controllers\AddressController::class, 'getConfig']);
-Route::get('/address-lookup', [\App\Http\Controllers\AddressController::class, 'searchByPostcode']);
+
+

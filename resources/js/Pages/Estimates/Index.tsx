@@ -57,13 +57,14 @@ export default function Index({
 
       const estimateList = await Promise.all(
         estimates.map(async estimate => {
-          const customer = await estimate.customer.fetch();
-          const windows = await estimate.windows.fetch();
+          // Use safe helper method that tries relation first, then falls back
+          const customer = await watermelonDBService.getCustomerForEstimate(estimate);
+          const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
 
           return {
             _id: estimate.id,
             reference_number: estimate.referenceNumber,
-            customer_name: customer.name,
+            customer_name: customer?.name || 'Unknown Customer',
             created_at: estimate.createdAt.toLocaleDateString('en-GB'),
             window_count: windows.length,
             total_amount: estimate.finalAmount || 0,

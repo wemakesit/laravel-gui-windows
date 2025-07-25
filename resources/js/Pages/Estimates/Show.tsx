@@ -67,7 +67,7 @@ export default function Show({
         status: estimate.status,
       });
 
-      // Use the new method that handles the persistence issue
+      // Get customer using the safe helper method that tries relation first, then falls back
       const customer = await watermelonDBService.getCustomerForEstimate(estimate);
       const windows = await watermelonDBService.getWindowsByEstimate(estimate.id);
 

@@ -321,16 +321,6 @@ export default function Wizard({
         `${customerInfo.first_name || ''} ${customerInfo.last_name || ''}`.trim();
 
       // Save to WatermelonDB
-      console.log('Wizard: Creating customer with data:', {
-        name: customerName,
-        email: customerInfo.email || null,
-        phone: customerInfo.phone || null,
-        addressLine1: customerInfo.address || null,
-        city: customerInfo.city || null,
-        postcode: customerInfo.postcode || null,
-        country: customerInfo.country || null,
-      });
-
       const customer = await watermelonDBService.createCustomer({
         name: customerName,
         email: customerInfo.email || null,
@@ -341,20 +331,10 @@ export default function Wizard({
         country: customerInfo.country || null,
       });
 
-      console.log('Wizard: Customer created:', customer.id);
-
       const estimate = await watermelonDBService.createEstimate(customer.id);
-      console.log('Wizard: Estimate created:', {
-        id: estimate.id,
-        customerId: estimate.customerId,
-        referenceNumber: estimate.referenceNumber,
-        status: estimate.status,
-      });
 
       // Add windows to the estimate
       for (const window of windows) {
-        console.log('Wizard: Adding window to estimate:', window);
-
         // Map window data to the format expected by WatermelonDB
         const windowData = {
           room: window.room,
@@ -370,36 +350,21 @@ export default function Wizard({
           extras: window.extras || [],
         };
 
-        console.log('Wizard: Mapped window data:', windowData);
         await watermelonDBService.addWindowToEstimate(estimate.id, windowData);
       }
 
       // Update estimate with total amount
-      console.log('Wizard: Updating estimate amounts:', { totalAmount, finalAmount: totalAmount });
       await estimate.updateAmounts({
         totalAmount,
         finalAmount: totalAmount,
       });
 
-      console.log('Wizard: Estimate saved successfully, waiting for persistence before redirect...');
+      // Verify the estimate is properly persisted using WatermelonDB's built-in verification
+      const verification = await watermelonDBService.verifyEstimatePersistence(estimate.id, windows.length);
 
-      // Wait for data to be persisted to IndexedDB before redirecting
-      // This ensures the estimate will be available when the page loads
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      // Verify the estimate is actually persisted before redirecting
-      try {
-        const persistedEstimate = await watermelonDBService.getEstimate(estimate.id);
-        if (!persistedEstimate) {
-          console.error('Wizard: Estimate not found after persistence wait, extending wait...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      } catch (error) {
-        console.error('Wizard: Error verifying estimate persistence:', error);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!verification.success) {
+        throw new Error(`Failed to verify estimate persistence: ${verification.error}`);
       }
-
-      console.log('Wizard: Persistence wait completed, redirecting to:', `/estimates/${estimate.id}`);
 
       // Redirect to the estimate details page with offline mode flag
       window.location.href = `/estimates/${estimate.id}?offline=true`;

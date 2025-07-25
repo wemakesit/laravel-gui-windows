@@ -505,77 +505,7 @@ class ApiService
         return $this->performGetRequest('/api/v1/config/pdf_text_config');
     }
 
-    /**
-     * Get options
-     *
-     * @return array<string, mixed> Options data or default options if endpoint doesn't exist
-     */
-    public function getOptions(): array
-    {
-        try {
-            // Try to get options from the API directly (not using performGetRequest)
-            // so we can catch and handle the 404 error
-            $response = $this->executeWithRetry('/api/v1/config/options', function () {
-                return $this->client->get('/api/v1/config/options');
-            });
 
-            if ($response->successful()) {
-                return $response->json() ?? [];
-            }
-
-            // If we get a 404, return default options
-            if ($response->status() === 404) {
-                Log::info('Options endpoint not found, returning default options');
-
-                return [
-                    'options' => [
-                        ['id' => 1, 'name' => 'Option 1'],
-                        ['id' => 2, 'name' => 'Option 2'],
-                        ['id' => 3, 'name' => 'Option 3'],
-                        ['id' => 4, 'name' => 'Option 4'],
-                        ['id' => 5, 'name' => 'Option 5'],
-                    ],
-                ];
-            }
-
-            // For other error statuses, return an error response
-            return $this->createErrorResponse(
-                "API call to /api/v1/config/options failed with status {$response->status()}",
-                $response->status(),
-                $response->json() ?? []
-            );
-        } catch (RequestException $e) {
-            // If the endpoint doesn't exist (404), return a default structure
-            if ($e->response && $e->response->status() === 404) {
-                Log::info('Options endpoint not found, returning default options');
-
-                return [
-                    'options' => [
-                        ['id' => 1, 'name' => 'Option 1'],
-                        ['id' => 2, 'name' => 'Option 2'],
-                        ['id' => 3, 'name' => 'Option 3'],
-                        ['id' => 4, 'name' => 'Option 4'],
-                        ['id' => 5, 'name' => 'Option 5'],
-                    ],
-                ];
-            }
-
-            // For other errors, return an error response
-            $statusCode = $e->response ? $e->response->status() : 500;
-
-            return $this->createErrorResponse(
-                $e->getMessage(),
-                $statusCode,
-                $e->response ? ($e->response->json() ?? []) : []
-            );
-        } catch (Exception $e) {
-            // For unexpected errors, return an error response
-            return $this->createErrorResponse(
-                "Unexpected error: {$e->getMessage()}",
-                500
-            );
-        }
-    }
 
     /**
      * Update options
@@ -601,45 +531,7 @@ class ApiService
         return $this->performUpdateRequest('/api/v1/config/pdf_text_config', $data, $partial);
     }
 
-    /**
-     * Format window options to ensure they are properly structured
-     *
-     * @param  array<string, mixed>  $data  The estimate data containing windows
-     * @return array<string, mixed> The data with properly formatted window options
-     */
-    protected function formatWindowOptions(array $data): array
-    {
-        if (isset($data['windows']) && is_array($data['windows'])) {
-            foreach ($data['windows'] as &$window) {
-                // Ensure options is set (default to [1] if not set)
-                if (! isset($window['options'])) {
-                    $window['options'] = [1];
-                }
 
-                // If options is a single integer, convert it to an array
-                if (is_numeric($window['options'])) {
-                    $window['options'] = [(int) $window['options']];
-                }
-
-                // If options is an empty array, set it to [1]
-                if (is_array($window['options']) && empty($window['options'])) {
-                    $window['options'] = [1];
-                }
-
-                // If options is a string representation of an array (from form data), convert it to an actual array
-                if (is_string($window['options']) && strpos($window['options'], ',') !== false) {
-                    $window['options'] = array_map('intval', explode(',', $window['options']));
-                }
-
-                // Ensure all option IDs are integers
-                if (is_array($window['options'])) {
-                    $window['options'] = array_map('intval', $window['options']);
-                }
-            }
-        }
-
-        return $data;
-    }
 
     /**
      * Generate estimate PDF from the API
@@ -654,8 +546,7 @@ class ApiService
         // Log the data being sent to the API for debugging
         Log::info('Sending estimate data to API', ['data' => json_encode($data)]);
 
-        // Format window options
-        $data = $this->formatWindowOptions($data);
+
 
         // Prepare the data for the API
         $requestData = [

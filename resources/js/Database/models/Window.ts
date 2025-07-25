@@ -33,7 +33,8 @@ export default class Window extends Model {
   @field('glass_type') glassType!: string | null;
   @field('opening_type') openingType!: string | null;
   @field('notes') notes!: string | null;
-  @json('options', json => json) options!: string[] | null; // Selected options array
+  @field('options') options!: string | null; // JSON string for window options
+  @field('is_synced') isSynced!: boolean | null;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
@@ -86,7 +87,6 @@ export default class Window extends Model {
     finish?: string | null;
     glassType?: string | null;
     openingType?: string | null;
-    options?: string[] | null;
   }) {
     await this.update(window => {
       if (config.windowType !== undefined)
@@ -95,7 +95,6 @@ export default class Window extends Model {
       if (config.glassType !== undefined) window.glassType = config.glassType;
       if (config.openingType !== undefined)
         window.openingType = config.openingType;
-      if (config.options !== undefined) window.options = config.options;
     });
   }
 

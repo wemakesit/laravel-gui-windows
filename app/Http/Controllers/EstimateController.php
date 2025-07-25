@@ -74,7 +74,7 @@ class EstimateController extends Controller
         $finishes = $apiService->getFinishes();
         $companyInfo = $apiService->getCompanyInfo();
         $pdfTextConfig = $apiService->getPdfTextConfig();
-        $options = $apiService->getOptions();
+
 
         return Inertia::render('Estimates/Wizard', [
             'windowTypes' => $windowTypes,
@@ -82,7 +82,7 @@ class EstimateController extends Controller
             'finishes' => $finishes,
             'companyInfo' => $companyInfo,
             'pdfTextConfig' => $pdfTextConfig,
-            'options' => $options,
+
             'estimateId' => $id,
             'useOfflineMode' => true,
         ]);

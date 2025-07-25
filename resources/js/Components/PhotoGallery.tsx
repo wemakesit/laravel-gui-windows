@@ -61,8 +61,10 @@ export default function PhotoGallery({
   const handlePhotoDelete = async (photoId: string) => {
     if (confirm('Are you sure you want to delete this photo?')) {
       try {
-        // TODO: Implement delete method in WatermelonDBService
-        // For now, just remove from local state
+        // Delete from WatermelonDB
+        await watermelonDBService.deletePhoto(photoId);
+
+        // Remove from local state
         setPhotos(prev => prev.filter(photo => photo.id !== photoId));
 
         // Cleanup object URL

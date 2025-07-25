@@ -61,6 +61,13 @@ export const migrations = schemaMigrations({
         // This migration forces a schema refresh to fix persistence issues
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        // Fix customer_id field mapping from @text to @field decorator
+        // This addresses the IndexedDB persistence issue
+      ],
+    },
   ],
 });
 

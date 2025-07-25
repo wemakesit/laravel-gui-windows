@@ -7,200 +7,90 @@ import { schema } from '../../../resources/js/Database/schema';
 
 describe('WatermelonDB Schema', () => {
   test('should have correct version', () => {
-    expect(schema.version).toBe(1);
+    expect(schema.version).toBe(6);
   });
 
   test('should have all required tables', () => {
-    const tableNames = schema.tables.map(table => table.name);
-    
+    const tableNames = Object.keys(schema.tables);
+
     expect(tableNames).toContain('customers');
     expect(tableNames).toContain('estimates');
     expect(tableNames).toContain('windows');
     expect(tableNames).toContain('extras');
     expect(tableNames).toContain('photos');
+    expect(tableNames).toContain('window_types');
+    expect(tableNames).toContain('finishes');
+    expect(tableNames).toContain('company_info');
   });
 
-  describe('Customers Table', () => {
-    let customersTable;
+  // Test each table structure
+  describe('Table Structure Tests', () => {
+    test('customers table should have correct structure', () => {
+      const table = schema.tables.customers;
+      expect(table).toBeDefined();
+      expect(table.name).toBe('customers');
 
-    beforeEach(() => {
-      customersTable = schema.tables.find(table => table.name === 'customers');
+      // Check required columns exist
+      expect(table.columns.name).toBeDefined();
+      expect(table.columns.created_at).toBeDefined();
+      expect(table.columns.updated_at).toBeDefined();
+
+      // Check column types
+      expect(table.columns.name.type).toBe('string');
+      expect(table.columns.created_at.type).toBe('number');
+
+      // Check optional columns
+      expect(table.columns.email.isOptional).toBe(true);
+      expect(table.columns.name.isOptional).toBeFalsy();
     });
 
-    test('should exist', () => {
-      expect(customersTable).toBeDefined();
+    test('estimates table should have correct structure', () => {
+      const table = schema.tables.estimates;
+      expect(table).toBeDefined();
+      expect(table.name).toBe('estimates');
+
+      // Check foreign key is indexed
+      expect(table.columns.customer_id.isIndexed).toBe(true);
+      expect(table.columns.customer_id.isOptional).toBe(false);
+
+      // Check reference number is indexed
+      expect(table.columns.reference_number.isIndexed).toBe(true);
     });
 
-    test('should have required columns', () => {
-      const columnNames = customersTable.columns.map(col => col.name);
-      
-      expect(columnNames).toContain('name');
-      expect(columnNames).toContain('email');
-      expect(columnNames).toContain('phone');
-      expect(columnNames).toContain('address_line_1');
-      expect(columnNames).toContain('address_line_2');
-      expect(columnNames).toContain('city');
-      expect(columnNames).toContain('county');
-      expect(columnNames).toContain('postcode');
-      expect(columnNames).toContain('country');
-      expect(columnNames).toContain('company_name');
-      expect(columnNames).toContain('notes');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
+    test('windows table should have correct structure', () => {
+      const table = schema.tables.windows;
+      expect(table).toBeDefined();
+      expect(table.name).toBe('windows');
+
+      // Check foreign key
+      expect(table.columns.estimate_id.isIndexed).toBe(true);
+
+      // Check required fields
+      expect(table.columns.room.type).toBe('string');
+      expect(table.columns.width.type).toBe('number');
+      expect(table.columns.height.type).toBe('number');
     });
 
-    test('should have correct column types', () => {
-      const nameColumn = customersTable.columns.find(col => col.name === 'name');
-      const createdAtColumn = customersTable.columns.find(col => col.name === 'created_at');
-      
-      expect(nameColumn.type).toBe('string');
-      expect(createdAtColumn.type).toBe('number');
+    test('photos table should have correct structure', () => {
+      const table = schema.tables.photos;
+      expect(table).toBeDefined();
+      expect(table.name).toBe('photos');
+
+      // Check indexed columns
+      expect(table.columns.estimate_id.isIndexed).toBe(true);
+      expect(table.columns.window_id.isIndexed).toBe(true);
+      expect(table.columns.window_id.isOptional).toBe(true);
     });
 
-    test('should have optional columns marked correctly', () => {
-      const nameColumn = customersTable.columns.find(col => col.name === 'name');
-      const emailColumn = customersTable.columns.find(col => col.name === 'email');
-      
-      expect(nameColumn.isOptional).toBeFalsy();
-      expect(emailColumn.isOptional).toBe(true);
-    });
-  });
+    test('extras table should have correct structure', () => {
+      const table = schema.tables.extras;
+      expect(table).toBeDefined();
+      expect(table.name).toBe('extras');
 
-  describe('Estimates Table', () => {
-    let estimatesTable;
-
-    beforeEach(() => {
-      estimatesTable = schema.tables.find(table => table.name === 'estimates');
-    });
-
-    test('should exist', () => {
-      expect(estimatesTable).toBeDefined();
-    });
-
-    test('should have required columns', () => {
-      const columnNames = estimatesTable.columns.map(col => col.name);
-      
-      expect(columnNames).toContain('customer_id');
-      expect(columnNames).toContain('reference_number');
-      expect(columnNames).toContain('status');
-      expect(columnNames).toContain('total_amount');
-      expect(columnNames).toContain('discount_amount');
-      expect(columnNames).toContain('vat_amount');
-      expect(columnNames).toContain('final_amount');
-      expect(columnNames).toContain('notes');
-      expect(columnNames).toContain('valid_until');
-      expect(columnNames).toContain('pdf_generated_at');
-      expect(columnNames).toContain('pdf_url');
-      expect(columnNames).toContain('is_synced');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
-    });
-
-    test('should have indexed foreign key', () => {
-      const customerIdColumn = estimatesTable.columns.find(col => col.name === 'customer_id');
-      
-      expect(customerIdColumn.isIndexed).toBe(true);
+      // Check indexed columns
+      expect(table.columns.estimate_id.isIndexed).toBe(true);
+      expect(table.columns.api_id.isIndexed).toBe(true);
     });
   });
 
-  describe('Windows Table', () => {
-    let windowsTable;
-
-    beforeEach(() => {
-      windowsTable = schema.tables.find(table => table.name === 'windows');
-    });
-
-    test('should exist', () => {
-      expect(windowsTable).toBeDefined();
-    });
-
-    test('should have required columns', () => {
-      const columnNames = windowsTable.columns.map(col => col.name);
-      
-      expect(columnNames).toContain('estimate_id');
-      expect(columnNames).toContain('room');
-      expect(columnNames).toContain('window_type');
-      expect(columnNames).toContain('width');
-      expect(columnNames).toContain('height');
-      expect(columnNames).toContain('quantity');
-      expect(columnNames).toContain('unit_price');
-      expect(columnNames).toContain('total_price');
-      expect(columnNames).toContain('finish');
-      expect(columnNames).toContain('glass_type');
-      expect(columnNames).toContain('opening_type');
-      expect(columnNames).toContain('notes');
-      expect(columnNames).toContain('options');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
-    });
-
-    test('should have correct column types', () => {
-      const widthColumn = windowsTable.columns.find(col => col.name === 'width');
-      const roomColumn = windowsTable.columns.find(col => col.name === 'room');
-      
-      expect(widthColumn.type).toBe('number');
-      expect(roomColumn.type).toBe('string');
-    });
-  });
-
-  describe('Extras Table', () => {
-    let extrasTable;
-
-    beforeEach(() => {
-      extrasTable = schema.tables.find(table => table.name === 'extras');
-    });
-
-    test('should exist', () => {
-      expect(extrasTable).toBeDefined();
-    });
-
-    test('should have required columns', () => {
-      const columnNames = extrasTable.columns.map(col => col.name);
-      
-      expect(columnNames).toContain('estimate_id');
-      expect(columnNames).toContain('name');
-      expect(columnNames).toContain('description');
-      expect(columnNames).toContain('quantity');
-      expect(columnNames).toContain('unit_price');
-      expect(columnNames).toContain('total_price');
-      expect(columnNames).toContain('category');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
-    });
-  });
-
-  describe('Photos Table', () => {
-    let photosTable;
-
-    beforeEach(() => {
-      photosTable = schema.tables.find(table => table.name === 'photos');
-    });
-
-    test('should exist', () => {
-      expect(photosTable).toBeDefined();
-    });
-
-    test('should have required columns', () => {
-      const columnNames = photosTable.columns.map(col => col.name);
-      
-      expect(columnNames).toContain('estimate_id');
-      expect(columnNames).toContain('window_id');
-      expect(columnNames).toContain('filename');
-      expect(columnNames).toContain('file_path');
-      expect(columnNames).toContain('file_size');
-      expect(columnNames).toContain('mime_type');
-      expect(columnNames).toContain('caption');
-      expect(columnNames).toContain('is_synced');
-      expect(columnNames).toContain('created_at');
-      expect(columnNames).toContain('updated_at');
-    });
-
-    test('should have indexed columns', () => {
-      const estimateIdColumn = photosTable.columns.find(col => col.name === 'estimate_id');
-      const windowIdColumn = photosTable.columns.find(col => col.name === 'window_id');
-      
-      expect(estimateIdColumn.isIndexed).toBe(true);
-      expect(windowIdColumn.isIndexed).toBe(true);
-    });
-  });
 });

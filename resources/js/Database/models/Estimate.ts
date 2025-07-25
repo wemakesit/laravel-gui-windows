@@ -24,7 +24,7 @@ export default class Estimate extends Model {
     photos: { type: 'has_many', foreignKey: 'estimate_id' },
   } as const;
 
-  @text('customer_id') customerId!: string;
+  @field('customer_id') customerId!: string;
   @text('reference_number') referenceNumber!: string;
   @field('status') status!: string;
   @field('total_amount') totalAmount!: number | null;
@@ -36,6 +36,8 @@ export default class Estimate extends Model {
   @date('pdf_generated_at') pdfGeneratedAt!: Date | null;
   @field('pdf_url') pdfUrl!: string | null;
   @field('is_synced') isSynced!: boolean;
+  @field('has_conflicts') hasConflicts!: boolean | null;
+  @field('conflict_data') conflictData!: string | null;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

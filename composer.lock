@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "80efe4b3b82c9c7acdd39b013483f9ae",
+    "content-hash": "47b09ae6ab5bd24b097566b4d946e1a3",
     "packages": [
         {
             "name": "brick/math",
@@ -2240,6 +2240,69 @@
                 }
             ],
             "time": "2025-03-24T10:02:05+00:00"
+        },
+        {
+            "name": "nathanheffley/laravel-watermelon",
+            "version": "v3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nathanheffley/laravel-watermelon.git",
+                "reference": "87fdd97b665ead583c983b9d8f4933381c68d866"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nathanheffley/laravel-watermelon/zipball/87fdd97b665ead583c983b9d8f4933381c68d866",
+                "reference": "87fdd97b665ead583c983b9d8f4933381c68d866",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/database": "^12.0",
+                "illuminate/http": "^12.0",
+                "illuminate/routing": "^12.0",
+                "illuminate/support": "^12.0",
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "laravel/sail": "^1.26",
+                "orchestra/testbench": "^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "NathanHeffley\\LaravelWatermelon\\WatermelonServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "NathanHeffley\\LaravelWatermelon\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nathan Heffley",
+                    "email": "nathan@nathanheffley.com"
+                }
+            ],
+            "description": "Easily set up a sync endpoint to support Watermelon DB in your Laravel projects.",
+            "keywords": [
+                "database",
+                "laravel",
+                "offline",
+                "package",
+                "watermelon",
+                "watermelondb"
+            ],
+            "support": {
+                "issues": "https://github.com/nathanheffley/laravel-watermelon/issues",
+                "source": "https://github.com/nathanheffley/laravel-watermelon/tree/v3.0.0"
+            },
+            "time": "2025-02-26T17:41:25+00:00"
         },
         {
             "name": "nesbot/carbon",

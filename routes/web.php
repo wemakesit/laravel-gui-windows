@@ -5,6 +5,7 @@ use App\Http\Controllers\EstimateController;
 use App\Http\Controllers\EstimateCreateController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WatermelonSyncController;
 use Inertia\Inertia;
 
 // Authentication required routes
@@ -46,6 +47,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/sync-test', function () {
         return Inertia::render('SyncTest');
     })->name('sync.test');
+
+    // WatermelonDB Sync Routes
+    Route::prefix('api/watermelon')->group(function () {
+        Route::post('/sync-estimate', [WatermelonSyncController::class, 'syncEstimate'])->name('watermelon.sync.estimate');
+        Route::get('/estimates', [WatermelonSyncController::class, 'getEstimates'])->name('watermelon.estimates');
+        Route::get('/estimates/{id}', [WatermelonSyncController::class, 'getEstimate'])->name('watermelon.estimate');
+    });
 });
 
 Route::middleware('auth')->group(function () {

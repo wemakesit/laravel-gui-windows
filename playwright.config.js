@@ -97,13 +97,13 @@ export default defineConfig({
     },
   ],
 
-  // Run your local dev server before starting the tests
-  webServer: {
-    command: 'php artisan serve --host=0.0.0.0 --port=8888',
-    port: 8888,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  // Use existing Sail server instead of starting a new one
+  // webServer: {
+  //   command: 'php artisan serve --host=0.0.0.0 --port=8888',
+  //   port: 8888,
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 120000,
+  // },
 
   // Global setup and teardown
   globalSetup: './tests/e2e/playwright/global-setup.js',

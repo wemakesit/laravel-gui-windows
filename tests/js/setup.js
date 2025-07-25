@@ -3,9 +3,8 @@
  * Global test configuration and mocks
  */
 
-// Mock window.location
-delete window.location;
-window.location = {
+// Mock window.location for JSDOM compatibility
+const mockLocation = {
   href: 'http://localhost:8888',
   origin: 'http://localhost:8888',
   protocol: 'http:',
@@ -19,6 +18,21 @@ window.location = {
   replace: jest.fn(),
   reload: jest.fn(),
 };
+
+// Only redefine if not already defined or if we can configure it
+if (!window.location || Object.getOwnPropertyDescriptor(window, 'location')?.configurable !== false) {
+  try {
+    delete window.location;
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+      configurable: true,
+    });
+  } catch (error) {
+    // Fallback: just assign the mock properties
+    Object.assign(window.location, mockLocation);
+  }
+}
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

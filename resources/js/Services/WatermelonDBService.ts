@@ -159,35 +159,6 @@ export class WatermelonDBService {
     }
   }
 
-  /**
-   * Get customer for estimate with fallback to backup data
-   * This handles the WatermelonDB persistence issue where customerId becomes undefined
-   */
-  async getCustomerForEstimate(estimate: Estimate): Promise<Customer | null> {
-    // Try primary customerId field first
-    if (estimate.customerId) {
-      const customer = await this.getCustomer(estimate.customerId);
-      if (customer) {
-        return customer;
-      }
-    }
-
-    // Fallback to backup data in notes field
-    if (estimate.notes) {
-      try {
-        const backupData = JSON.parse(estimate.notes);
-        if (backupData.backupData && backupData.customerId) {
-          console.log('WatermelonDBService: Using backup customerId from notes:', backupData.customerId);
-          return await this.getCustomer(backupData.customerId);
-        }
-      } catch (error) {
-        console.warn('WatermelonDBService: Failed to parse backup data from notes:', error);
-      }
-    }
-
-    return null;
-  }
-
   async getAllCustomers(): Promise<Customer[]> {
     return await this.db.get<Customer>('customers').query().fetch();
   }
@@ -212,12 +183,6 @@ export class WatermelonDBService {
     customerId: string,
     referenceNumber?: string
   ): Promise<Estimate> {
-    // Validate customer exists before creating estimate
-    const customer = await this.getCustomer(customerId);
-    if (!customer) {
-      throw new Error(`Customer with ID ${customerId} not found`);
-    }
-
     return await this.db.write(async () => {
       return await this.db.get<Estimate>('estimates').create(estimate => {
         estimate.customerId = customerId;
@@ -225,13 +190,6 @@ export class WatermelonDBService {
           referenceNumber || this.generateReferenceNumber();
         estimate.status = 'draft';
         estimate.isSynced = false;
-
-        // Store customer ID in notes as backup (workaround for persistence issue)
-        estimate.notes = JSON.stringify({
-          customerId: customerId,
-          customerName: customer.name,
-          backupData: true
-        });
       });
     });
   }
@@ -387,6 +345,46 @@ export class WatermelonDBService {
     await this.db.write(async () => {
       await this.db.unsafeResetDatabase();
     });
+  }
+
+  /**
+   * Get customer for estimate
+   */
+  async getCustomerForEstimate(estimate: Estimate): Promise<Customer | null> {
+    try {
+      return await estimate.customer.fetch();
+    } catch (error) {
+      console.error('Error fetching customer for estimate:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Verify estimate persistence
+   */
+  async verifyEstimatePersistence(estimateId: string, expectedWindowCount: number): Promise<{
+    success: boolean;
+    estimate: Estimate | null;
+    windowCount: number;
+  }> {
+    try {
+      const estimate = await this.getEstimateById(estimateId);
+      if (!estimate) {
+        return { success: false, estimate: null, windowCount: 0 };
+      }
+
+      const windows = await this.getWindowsByEstimate(estimateId);
+      const windowCount = windows.length;
+
+      return {
+        success: windowCount === expectedWindowCount,
+        estimate,
+        windowCount,
+      };
+    } catch (error) {
+      console.error('Error verifying estimate persistence:', error);
+      return { success: false, estimate: null, windowCount: 0 };
+    }
   }
 
   async getStorageInfo(): Promise<{

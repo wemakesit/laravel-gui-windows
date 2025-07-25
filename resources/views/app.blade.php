@@ -41,6 +41,11 @@
 
 
 
+        <!-- Frontend Configuration -->
+        <script>
+            window.frontendConfig = {!! \App\Services\FrontendConfigService::getConfigJson() !!};
+        </script>
+
         <!-- Scripts -->
         @routes
         @viteReactRefresh

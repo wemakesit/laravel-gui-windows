@@ -18,6 +18,11 @@ console.log('App: Importing WatermelonDB Service...');
 import { watermelonDBService } from './Services/WatermelonDBService';
 console.log('App: WatermelonDB Service imported successfully');
 
+// Initialize Storage Management
+console.log('App: Importing Storage Management Service...');
+import StorageManagementService from './Services/StorageManagementService';
+console.log('App: Storage Management Service imported successfully');
+
 // Register service worker from Vite PWA plugin
 import { registerSW } from 'virtual:pwa-register';
 
@@ -87,6 +92,9 @@ createInertiaApp({
     ),
   setup({ el, App, props }) {
     const root = createRoot(el);
+
+    // Initialize storage monitoring
+    StorageManagementService.initializeStorageMonitoring();
 
     root.render(<App {...props} />);
   },

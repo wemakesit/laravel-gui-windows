@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 6,
   tables: [
     tableSchema({
       name: 'customers',
@@ -36,6 +36,8 @@ export const schema = appSchema({
         { name: 'pdf_generated_at', type: 'number', isOptional: true },
         { name: 'pdf_url', type: 'string', isOptional: true },
         { name: 'is_synced', type: 'boolean' },
+        { name: 'has_conflicts', type: 'boolean', isOptional: true },
+        { name: 'conflict_data', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -55,7 +57,9 @@ export const schema = appSchema({
         { name: 'glass_type', type: 'string', isOptional: true },
         { name: 'opening_type', type: 'string', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
-        { name: 'options', type: 'string', isOptional: true }, // JSON string for selected options
+        { name: 'options', type: 'string', isOptional: true }, // JSON string for window options
+        { name: 'is_synced', type: 'boolean', isOptional: true },
+
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

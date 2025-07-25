@@ -32,33 +32,93 @@ A comprehensive Laravel application with Inertia.js and React for window estimat
 
 ## 📋 Requirements
 
-- **PHP**: 8.1 or higher
+### **Option 1: Docker with Laravel Sail (Recommended)**
+- **Docker**: Latest version
+- **Docker Compose**: Latest version
+
+### **Option 2: Local Development**
+- **PHP**: 8.2 or higher
 - **Node.js**: 18 or higher
 - **Composer**: Latest version
-- **CouchDB**: 3.3 or higher (for data sync)
-- **Laravel**: 11.x
+- **MySQL**: 8.0 or higher
+- **Redis**: Latest version
 
 ## 🛠 Installation
 
-### **1. Clone Repository**
+### **Option 1: Docker with Laravel Sail (Recommended)**
+
+#### **1. Clone Repository**
 ```bash
 git clone https://github.com/wemakesit/laravel-gui-windows.git
 cd laravel-gui-windows
 ```
 
-### 2. Install PHP dependencies
+#### **2. Copy Environment File**
+```bash
+cp .env.example .env
+```
 
+#### **3. Install Dependencies**
+```bash
+# Install PHP dependencies (requires PHP locally for initial setup)
+composer install
+
+# Start Sail containers
+./vendor/bin/sail up -d
+
+# Install JavaScript dependencies inside container
+./vendor/bin/sail npm install
+```
+
+#### **4. Set Up Application**
+```bash
+# Generate application key
+./vendor/bin/sail artisan key:generate
+
+# Run database migrations
+./vendor/bin/sail artisan migrate
+
+# Build frontend assets
+./vendor/bin/sail npm run build
+```
+
+#### **5. Access Application**
+- **Application**: http://localhost:8888
+- **Database**: localhost:3306 (username: sail, password: password)
+- **Redis**: localhost:6379
+
+#### **6. Optional: Create Sail Alias**
+To avoid typing `./vendor/bin/sail` every time, you can create an alias:
+
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+alias sail='./vendor/bin/sail'
+
+# Or use Laravel's recommended approach
+alias sail='[ -f sail ] && sh sail || sh vendor/bin/sail'
+```
+
+Then you can use `sail up -d` instead of `./vendor/bin/sail up -d`.
+
+### **Option 2: Local Development**
+
+#### **1. Clone Repository**
+```bash
+git clone https://github.com/wemakesit/laravel-gui-windows.git
+cd laravel-gui-windows
+```
+
+#### **2. Install PHP dependencies**
 ```bash
 composer install
 ```
 
-### 3. Install JavaScript dependencies
-
+#### **3. Install JavaScript dependencies**
 ```bash
 npm install
 ```
 
-### 4. Set up environment variables
+#### **4. Set up environment variables**
 
 ```bash
 cp .env.example .env
@@ -144,14 +204,7 @@ Generated files and estimates are stored in the `storage/app/` directory. Make s
 
 The application integrates with an external API running on port 8000. Ensure the API is running and properly configured in your `.env` file.
 
-## Address Lookup Integration
 
-The application uses the free Postcodes.io API for real UK address lookup by postcode. This service:
-
-- Requires no API key or registration
-- Provides postcode lookup for the entire UK
-- Returns geographic data for postcodes
-- Includes nearby postcodes to provide multiple address options
 
 The implementation creates address suggestions based on the postcode data, allowing users to select from these options or enter their address manually if needed.
 
@@ -230,31 +283,6 @@ If you encounter CORS errors like:
 Access to script at 'http://127.0.0.1:5173/...' from origin 'http://0.0.0.0:8888' has been blocked by CORS policy
 ```
 
-**Solution:**
-
-1. **Use the development script** (recommended):
-
-   ```bash
-   ./dev-server.sh start
-   ```
-
-2. **Manual setup**:
-
-   ```bash
-   # Terminal 1: Start Laravel server
-   php artisan serve --host=0.0.0.0 --port=8888
-
-   # Terminal 2: Start Vite server
-   npm run dev
-   ```
-
-3. **Update your .env file** to match your setup:
-
-   ```env
-   APP_URL=http://0.0.0.0:8888
-   VITE_DEV_SERVER_URL=http://0.0.0.0:5173
-   ```
-
 ### **Common Issues**
 
 **Port conflicts:**
@@ -287,18 +315,30 @@ php artisan migrate:fresh --seed
 
 ### **Development Server Commands**
 
+#### **With Laravel Sail (Docker)**
 ```bash
-# Start both servers with CORS configuration
-./dev-server.sh start
+# Start all containers
+./vendor/bin/sail up -d
 
-# Stop all development servers
-./dev-server.sh stop
+# Stop all containers
+./vendor/bin/sail down
 
-# Restart servers
-./dev-server.sh restart
+# View logs
+./vendor/bin/sail logs
 
-# Check server status
-./dev-server.sh status
+# Run artisan commands
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan tinker
+
+# Run npm commands
+./vendor/bin/sail npm run dev
+./vendor/bin/sail npm run build
+
+# Access container shell
+./vendor/bin/sail shell
+
+# Run tests
+./vendor/bin/sail test
 ```
 
 ## License

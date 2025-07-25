@@ -290,7 +290,7 @@ test.describe('Current Issues Test', () => {
         const estimate = await window.watermelonDBService.getEstimate(testData.estimateId);
         const customer = await window.watermelonDBService.getCustomer(testData.customerId);
 
-        // Test the new method that handles persistence issues
+        // Test the safe relation-based approach
         const customerViaEstimate = estimate ? await window.watermelonDBService.getCustomerForEstimate(estimate) : null;
 
         console.log('🧪 After page reload test:', {
